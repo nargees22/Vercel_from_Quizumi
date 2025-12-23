@@ -189,7 +189,21 @@ useEffect(() => {
   const updateGameState = async (next: GameState) => {
     if (!quizId || !quiz) return;
 
+    // ✅ INSTANT UI UPDATE
+  setQuiz((prev: any) => ({
+    ...prev,
+    gameState: next,
+    currentIndex:
+      next === GameState.QUESTION_INTRO &&
+      quiz.gameState === GameState.LEADERBOARD
+        ? prev.currentIndex + 1
+        : prev.currentIndex,
+  }));
+
+  if (next === GameState.QUESTION_ACTIVE) {
+    setTimerCompleted(false);
     setAnswers([]);
+  }
 
     await supabase
       .from('quiz_master_structure')
@@ -313,7 +327,10 @@ useEffect(() => {
       <h1 className="text-3xl font-bold mb-6">{quiz.title}</h1>
 
       {/* QUESTION */}
-      {question && (
+    {question &&
+  (quiz.gameState === GameState.QUESTION_ACTIVE ||
+    quiz.gameState === GameState.QUESTION_RESULT) && (
+
         <div className="w-full max-w-3xl mb-8">
           <h2 className="text-xl font-bold mb-6 text-center">
             {question.text}
