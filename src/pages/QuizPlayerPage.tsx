@@ -152,6 +152,15 @@ const QuizPlayerPage = () => {
       const isCorrect = index === question.correct_answer_index;
       setAnswerResult(isCorrect ? 'correct' : 'wrong');
 
+      // Debugging: Log the payload being sent to the database
+      console.log('Submitting answer:', {
+        quiz_id: quizId,
+        question_id: question.pk_id,
+        player_id: 'player_unique_id', // Replace with actual player ID
+        answer: index,
+        is_correct: isCorrect,
+      });
+
       // Send the answer to the database
       try {
         await supabase

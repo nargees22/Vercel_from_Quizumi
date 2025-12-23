@@ -206,6 +206,30 @@ const QuizHostPage = () => {
   };
 
   // --------------------------------------------------
+  // START QUIZ
+  // --------------------------------------------------
+  const startQuiz = async () => {
+    if (!quizId || !quiz) return;
+
+    // Transition to the first question
+    await supabase
+      .from('quiz_master_structure')
+      .update({
+        game_state: GameState.QUESTION_ACTIVE,
+        current_question_index: 0,
+        show_question_to_players: true,
+      })
+      .eq('quiz_id', quizId);
+
+    setQuiz((prev: any) => ({
+      ...prev,
+      gameState: GameState.QUESTION_ACTIVE,
+      currentIndex: 0,
+      showQuestionToPlayers: true,
+    }));
+  };
+
+  // --------------------------------------------------
   // TIMER (ONLY IN QUESTION_ACTIVE)
   // --------------------------------------------------
   const TimerSection = () => {
@@ -233,6 +257,16 @@ const QuizHostPage = () => {
   return (
     <div className="p-6 flex flex-col items-center">
       <h1 className="text-3xl font-bold mb-6">{quiz.title}</h1>
+
+      {/* START QUIZ */}
+      {quiz.gameState === GameState.LOBBY && (
+        <Button
+          onClick={startQuiz}
+          className="bg-blue-600 hover:bg-blue-700"
+        >
+          Start Quiz
+        </Button>
+      )}
 
       {/* QUESTION */}
       {quiz.gameState === GameState.QUESTION_ACTIVE && question && (
