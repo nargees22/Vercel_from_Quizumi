@@ -72,6 +72,12 @@ const QuizHostPage = () => {
       gameState: quizRow.game_state,
       currentIndex: quizRow.current_question_index ?? 0,
       showQuestionToPlayers: quizRow.show_question_to_players,
+      config: {
+    clanBased: quizRow.clan_based ?? false,
+    titanName: quizRow.titan_name ?? null,
+    defenderName: quizRow.defender_name ?? null,
+    clanAssignment: quizRow.clan_assignment ?? null,
+  },
       questions: questionRows.map((q: any) => ({
         id: q.pk_id,
         text: q.question_text,
@@ -300,12 +306,12 @@ useEffect(() => {
             ))}
           </div>
 
-         <TimerCircle
+         {/* <TimerCircle
   duration={question.timeLimit}
   quizId={quizId}
   questionIndex={quiz.currentIndex}
   onComplete={() => {}} // ❌ HOST should not auto-change state
-/>
+/> */}
 
         </div>
       )}

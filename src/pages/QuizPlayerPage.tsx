@@ -4,6 +4,7 @@ import { supabase } from '../service/supabase';
 import { PageLoader } from '../components/PageLoader';
 import Button from '../components/Button';
 import { GameState } from '../../types';
+import TimerCircle from '../components/TimerCircle';
 
 interface QuestionRow {
   pk_id: number;
@@ -140,7 +141,7 @@ const joinQuiz = async () => {
       .on(
         'postgres_changes',
         {
-          event: 'UPDATE',
+          event: '*',
           schema: 'public',
           table: 'quiz_master_structure',
           filter: `quiz_id=eq.${quizId}`,
@@ -370,6 +371,12 @@ const joinQuiz = async () => {
         <h1 className="text-3xl font-bold mb-6 text-center">
           🏆 Leaderboard
         </h1>
+       <TimerCircle
+  duration={30}
+  quizId={quizId}
+  questionIndex={quiz.currentIndex}
+  onComplete={() => {}}
+/>
 
         {players.length === 0 && (
           <p className="text-center text-slate-500">
