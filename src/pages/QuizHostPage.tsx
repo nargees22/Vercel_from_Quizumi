@@ -293,16 +293,14 @@ const updateGameState = async (next: GameState) => {
   }));
 
   await supabase
-    .from('quiz_master_structure')
-    .update({
-      game_state: next,
-      current_question_index: nextIndex,
-      show_question_to_players: next === GameState.QUESTION_ACTIVE,
-      ...(next === GameState.QUESTION_ACTIVE && {
-        question_started_at: new Date().toISOString(), // ✅ ONLY HERE
-      }),
-    })
-    .eq('quiz_id', quizId);
+  .from('quiz_master_structure')
+  .update({
+    game_state: next,
+    current_question_index: nextIndex,
+    show_question_to_players: next === GameState.QUESTION_ACTIVE,
+  })
+  .eq('quiz_id', quizId);
+
 };
 
   // const isLastQuestion =
