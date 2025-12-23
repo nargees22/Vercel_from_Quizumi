@@ -144,38 +144,55 @@ const QuizPlayerPage = () => {
     ].filter(Boolean);
 
     // ✅ FINAL ANSWER HANDLER (DB WRITE)
-    const handleSelect = async (index: number) => {
-      if (selectedAnswer !== null) return;
+    // const handleSelect = async (index: number) => {
+    //   if (selectedAnswer !== null) return;
 
-      setSelectedAnswer(index);
+    //   setSelectedAnswer(index);
 
-      const isCorrect = index === question.correct_answer_index;
-      setAnswerResult(isCorrect ? 'correct' : 'wrong');
+    //   const isCorrect = index === question.correct_answer_index;
+    //   setAnswerResult(isCorrect ? 'correct' : 'wrong');
 
-      // Debugging: Log the payload being sent to the database
-      console.log('Submitting answer:', {
-        quiz_id: quizId,
-        question_id: question.pk_id,
-        player_id: 'player_unique_id', // Replace with actual player ID
-        answer: index,
-        is_correct: isCorrect,
-      });
+    //   // Debugging: Log the payload being sent to the database
+    //   console.log('Submitting answer:', {
+    //     quiz_id: quizId,
+    //     question_id: question.pk_id,
+    //     player_id: 'player_unique_id', // Replace with actual player ID
+    //     answer: index,
+    //     is_correct: isCorrect,
+    //   });
 
-      // Send the answer to the database
-      try {
-        await supabase
-          .from('quiz_answers')
-          .insert({
-            quiz_id: quizId,
-            question_id: question.pk_id,
-            player_id: 'player_unique_id', // Replace with actual player ID
-            answer: index,
-            is_correct: isCorrect,
-          });
-      } catch (error) {
-        console.error('Failed to submit answer:', error);
-      }
-    };
+    //   // Send the answer to the database
+    //   try {
+    //     await supabase
+    //       .from('quiz_answers')
+    //       .insert({
+    //         quiz_id: quizId,
+    //         question_id: question.pk_id,
+    //         player_id: 'player_unique_id', // Replace with actual player ID
+    //         answer: index,
+    //         is_correct: isCorrect,
+    //       });
+    //   } catch (error) {
+    //     console.error('Failed to submit answer:', error);
+    //   }
+    // };
+const handleSelect = async (index: number) => {
+  if (selectedAnswer !== null) return;
+
+  setSelectedAnswer(index);
+
+  setAnswerResult(
+    index === question.correct_answer_index ? 'correct' : 'wrong'
+  );
+
+  await supabase.from('quiz_answers').insert({
+    quiz_id: quiz.quiz_id,
+    player_id: quiz.player_id ?? 'anonymous',
+    question_id: String(question.pk_id), // ✅ STRING
+    answer: { index },                   // ✅ JSONB
+    score: index === question.correct_answer_index ? 1 : 0,
+  });
+};
 
     return (
       <div className="p-6 max-w-3xl mx-auto text-center">

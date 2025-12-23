@@ -164,12 +164,13 @@ const QuizHostPage = () => {
     const counts = new Array(question.options.length).fill(0);
 
     answers
-      .filter(a => a.question_id === question.id)
-      .forEach(a => {
-        if (typeof a.answer === 'number') {
-          counts[a.answer]++;
-        }
-      });
+  .filter(a => String(a.question_id) === String(question.id))
+  .forEach(a => {
+    const answerIndex = a.answer?.index;
+    if (typeof answerIndex === 'number') {
+      counts[answerIndex]++;
+    }
+  });
 
     return counts;
   }, [answers, question, quiz]);
