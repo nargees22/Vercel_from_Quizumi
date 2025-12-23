@@ -11,6 +11,7 @@ const QuizHostPage = () => {
   const { quizId } = useParams<{ quizId: string }>();
 
   const [quiz, setQuiz] = useState<any>(null);
+  
   const [players, setPlayers] = useState<any[]>([]);
   const [answers, setAnswers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -178,36 +179,73 @@ const QuizHostPage = () => {
   // --------------------------------------------------
   // GAME STATE UPDATE (CLEAN)
   // --------------------------------------------------
-  const updateGameState = async (next: GameState) => {
-    if (!quizId || !quiz) return;
+  // const updateGameState = async (next: GameState) => {
+  //   if (!quizId || !quiz) return;
 
-    let nextIndex = quiz.currentIndex;
+  //   let nextIndex = quiz.currentIndex;
 
-    if (
-      next === GameState.QUESTION_ACTIVE &&
-      quiz.gameState === GameState.LEADERBOARD
-    ) {
-      nextIndex = quiz.currentIndex + 1;
-    }
+  //   if (
+  //     next === GameState.QUESTION_ACTIVE &&
+  //     quiz.gameState === GameState.LEADERBOARD
+  //   ) {
+  //     nextIndex = quiz.currentIndex + 1;
+  //   }
 
-    setQuiz((prev: any) => ({
-      ...prev,
-      gameState: next,
-      currentIndex: nextIndex,
-    }));
+  //   setQuiz((prev: any) => ({
+  //     ...prev,
+  //     gameState: next,
+  //     currentIndex: nextIndex,
+  //   }));
 
-    await supabase
-      .from('quiz_master_structure')
-      .update({
-        game_state: next,
-        current_question_index: nextIndex,
-        show_question_to_players: next === GameState.QUESTION_ACTIVE,
-      })
-      .eq('quiz_id', quizId);
-  };
+  //  await supabase
+  // .from('quiz_master_structure')
+  // .update({
+  //   game_state: next,
+  //   current_question_index: nextIndex,
+  //   show_question_to_players: next === GameState.QUESTION_ACTIVE,
+  //   question_started_at:
+  //     next === GameState.QUESTION_ACTIVE ? new Date().toISOString() : null,
+  // })
+  //     .eq('quiz_id', quizId);
+  // };
+const updateGameState = async (next: GameState) => {
+  if (!quizId || !quiz) return;
 
-  const isLastQuestion =
-  quiz.currentIndex === quiz.questions.length - 1;
+  let nextIndex = quiz.currentIndex;
+
+  // move index ONLY when starting next question
+  if (
+    next === GameState.QUESTION_ACTIVE &&
+    quiz.gameState === GameState.LEADERBOARD
+  ) {
+    nextIndex = quiz.currentIndex + 1;
+  }
+
+  setQuiz((prev: any) => ({
+    ...prev,
+    gameState: next,
+    currentIndex: nextIndex,
+  }));
+
+  await supabase
+    .from('quiz_master_structure')
+    .update({
+      game_state: next,
+      current_question_index: nextIndex,
+      show_question_to_players: next === GameState.QUESTION_ACTIVE,
+      ...(next === GameState.QUESTION_ACTIVE && {
+        question_started_at: new Date().toISOString(), // ✅ ONLY HERE
+      }),
+    })
+    .eq('quiz_id', quizId);
+};
+
+  // const isLastQuestion =
+  // quiz.currentIndex === quiz.questions.length - 1;
+const isLastQuestion = useMemo(() => {
+  if (!quiz || !quiz.questions) return false;
+  return quiz.currentIndex === quiz.questions.length - 1;
+}, [quiz]);
 
 
   // --------------------------------------------------
@@ -243,6 +281,9 @@ const QuizHostPage = () => {
       {/* QUESTION */}
       {quiz.gameState === GameState.QUESTION_ACTIVE && question && (
         <div className="w-full max-w-3xl mb-8">
+          <h2 className="text-sm text-slate-500 mb-2 text-center">
+      Question {quiz.currentIndex + 1} of {quiz.questions.length}
+    </h2>
           <h2 className="text-xl font-bold mb-6 text-center">
             {question.text}
           </h2>
@@ -285,41 +326,35 @@ const QuizHostPage = () => {
         </div>
       )}
 
-      {/* LEADERBOARD */}
-      {quiz.gameState === GameState.LEADERBOARD && quiz.config && (
-        <IntermediateLeaderboard players={players} quiz={quiz} animate />
-      )}
+      
 
       {/* CONTROLS */}
       <div className="mt-8 flex gap-4">
-        {/* SHOW RESULTS */}
-        {quiz.gameState === GameState.QUESTION_ACTIVE && (
-          <Button
-            onClick={() => updateGameState(GameState.QUESTION_RESULT)}
-            className="bg-green-600 hover:bg-green-700"
-          >
-            Show Results
-          </Button>
-        )}
-
-        {/* SHOW LEADERBOARD (NORMAL QUESTIONS) */}
-  {quiz.gameState === GameState.QUESTION_RESULT && !isLastQuestion && (
+        <div className="mt-8 flex gap-4">
+  {/* QUESTION → RESULT */}
+  {quiz.gameState === GameState.QUESTION_ACTIVE && (
     <Button
-      onClick={() => updateGameState(GameState.LEADERBOARD)}
-      className="bg-blue-600 hover:bg-blue-700"
+      onClick={() => updateGameState(GameState.QUESTION_RESULT)}
+      className="bg-green-600 hover:bg-green-700"
     >
-      Show Leaderboard
+      Show Results
     </Button>
   )}
-  {/* FINAL LEADERBOARD (LAST QUESTION ONLY) */}
-  {quiz.gameState === GameState.QUESTION_RESULT && isLastQuestion && (
+
+  {/* RESULT → LEADERBOARD */}
+  {quiz.gameState === GameState.QUESTION_RESULT && (
     <Button
       onClick={() => updateGameState(GameState.LEADERBOARD)}
-      className="bg-gl-orange-600 hover:bg-gl-orange-700"
+      className={isLastQuestion
+        ? 'bg-gl-orange-600 hover:bg-gl-orange-700'
+        : 'bg-blue-600 hover:bg-blue-700'}
     >
-      Final Leaderboard
+      {isLastQuestion ? 'Final Leaderboard' : 'Show Leaderboard'}
     </Button>
-  )}{quiz.gameState === GameState.LEADERBOARD && !isLastQuestion && (
+  )}
+
+  {/* LEADERBOARD → NEXT QUESTION */}
+  {quiz.gameState === GameState.LEADERBOARD && !isLastQuestion && (
     <Button
       onClick={() => updateGameState(GameState.QUESTION_ACTIVE)}
       className="bg-gl-orange-600 hover:bg-gl-orange-700"
@@ -327,6 +362,8 @@ const QuizHostPage = () => {
       Next Question
     </Button>
   )}
+</div>
+
       </div>
     </div>
   );
