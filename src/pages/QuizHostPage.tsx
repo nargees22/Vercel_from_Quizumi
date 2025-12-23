@@ -19,15 +19,15 @@ const QuizHostPage = () => {
   const [answers, setAnswers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
-  if (quiz?.currentIndex !== undefined) {
-    setAnswers([]);
-  }
-}, [quiz?.currentIndex]);
+    if (quiz?.currentIndex !== undefined) {
+      setAnswers([]);
+    }
+  }, [quiz?.currentIndex]);
 
 
-useEffect(() => {
-  setTimerCompleted(false);
-}, [quiz?.currentIndex]);
+  useEffect(() => {
+    setTimerCompleted(false);
+  }, [quiz?.currentIndex]);
 
   // --------------------------------------------------
   // LOAD QUIZ DATA
@@ -62,27 +62,57 @@ useEffect(() => {
       return;
     }
 
-    setQuiz({
-      id: quizRow.quiz_id,
-      title: quizRow.title,
-      gameState: quizRow.game_state,
-      currentIndex: quizRow.current_question_index ?? 0,
-      showQuestionToPlayers: quizRow.show_question_to_players,
-      questions: questionRows.map((q: any) => ({
-  id: q.pk_id,               // 🔥 REQUIRED
-  text: q.question_text,
-  options: [
-    q.option_1,
-    q.option_2,
-    q.option_3,
-    q.option_4,
-  ].filter(Boolean),
-  correctAnswerIndex: q.correct_answer_index,
-  timeLimit: q.time_limit ?? 30,
-  type: q.type ?? QuestionType.MCQ,
-})),
+    // setQuiz({
+    //   id: quizRow.quiz_id,
+    //   title: quizRow.title,
+    //   gameState: quizRow.game_state,
+    //   currentIndex: quizRow.current_question_index ?? 0,
+    //   showQuestionToPlayers: quizRow.show_question_to_players,
+    //   questions: questionRows.map((q: any) => ({
+    //     id: q.pk_id,               // 🔥 REQUIRED
+    //     text: q.question_text,
+    //     options: [
+    //       q.option_1,
+    //       q.option_2,
+    //       q.option_3,
+    //       q.option_4,
+    //     ].filter(Boolean),
+    //     correctAnswerIndex: q.correct_answer_index,
+    //     timeLimit: q.time_limit ?? 30,
+    //     type: q.type ?? QuestionType.MCQ,
+    //   })),
 
-    });
+    // });
+    setQuiz({
+  id: quizRow.quiz_id,
+  title: quizRow.title,
+  gameState: quizRow.game_state,
+  currentIndex: quizRow.current_question_index ?? 0,
+  showQuestionToPlayers: quizRow.show_question_to_players,
+
+  // ✅ ADD THIS CONFIG OBJECT
+  config: {
+    clanBased: quizRow.clan_based ?? false,
+    titanName: quizRow.titan_name ?? null,
+    defenderName: quizRow.defender_name ?? null,
+    clanAssignment: quizRow.clan_assignment ?? null,
+  },
+
+  questions: questionRows.map((q: any) => ({
+    id: q.pk_id,
+    text: q.question_text,
+    options: [
+      q.option_1,
+      q.option_2,
+      q.option_3,
+      q.option_4,
+    ].filter(Boolean),
+    correctAnswerIndex: q.correct_answer_index,
+    timeLimit: q.time_limit ?? 30,
+    type: q.type ?? QuestionType.MCQ,
+  })),
+});
+
 
     setPlayers(playerRows ?? []);
     setLoading(false);
@@ -147,9 +177,9 @@ useEffect(() => {
   // --------------------------------------------------
   const question =
     quiz &&
-    quiz.questions &&
-    quiz.currentIndex >= 0 &&
-    quiz.currentIndex < quiz.questions.length
+      quiz.questions &&
+      quiz.currentIndex >= 0 &&
+      quiz.currentIndex < quiz.questions.length
       ? quiz.questions[quiz.currentIndex]
       : null;
 
@@ -167,20 +197,20 @@ useEffect(() => {
   //   return counts;
   // }, [answers, question]);
   const answerCounts = useMemo(() => {
-  if (!question || !quiz) return [];
+    if (!question || !quiz) return [];
 
-  const counts = new Array(question.options.length).fill(0);
+    const counts = new Array(question.options.length).fill(0);
 
-  answers
-    .filter(a => a.question_id === quiz.questions[quiz.currentIndex]?.id)
-    .forEach(a => {
-      if (typeof a.answer === 'number') {
-        counts[a.answer]++;
-      }
-    });
+    answers
+      .filter(a => a.question_id === quiz.questions[quiz.currentIndex]?.id)
+      .forEach(a => {
+        if (typeof a.answer === 'number') {
+          counts[a.answer]++;
+        }
+      });
 
-  return counts;
-}, [answers, question, quiz]);
+    return counts;
+  }, [answers, question, quiz]);
 
 
   // --------------------------------------------------
@@ -190,20 +220,20 @@ useEffect(() => {
     if (!quizId || !quiz) return;
 
     // ✅ INSTANT UI UPDATE
-  setQuiz((prev: any) => ({
-    ...prev,
-    gameState: next,
-    currentIndex:
-      next === GameState.QUESTION_INTRO &&
-      quiz.gameState === GameState.LEADERBOARD
-        ? prev.currentIndex + 1
-        : prev.currentIndex,
-  }));
+    setQuiz((prev: any) => ({
+      ...prev,
+      gameState: next,
+      currentIndex:
+        next === GameState.QUESTION_INTRO &&
+          quiz.gameState === GameState.LEADERBOARD
+          ? prev.currentIndex + 1
+          : prev.currentIndex,
+    }));
 
-  if (next === GameState.QUESTION_ACTIVE) {
-    setTimerCompleted(false);
-    setAnswers([]);
-  }
+    if (next === GameState.QUESTION_ACTIVE) {
+      setTimerCompleted(false);
+      setAnswers([]);
+    }
 
     await supabase
       .from('quiz_master_structure')
@@ -213,7 +243,7 @@ useEffect(() => {
           next === GameState.QUESTION_ACTIVE,
         current_question_index:
           next === GameState.QUESTION_INTRO &&
-          quiz.gameState === GameState.LEADERBOARD
+            quiz.gameState === GameState.LEADERBOARD
             ? quiz.currentIndex + 1
             : quiz.currentIndex,
       })
@@ -247,27 +277,27 @@ useEffect(() => {
   // TIMER FUNCTIONALITY
   // --------------------------------------------------
   const TimerCircleWrapper = () => {
-  if (
-    quiz &&
-    quiz.gameState === GameState.QUESTION_ACTIVE &&
-    question &&
-    !timerCompleted
-  ) {
-    return (
-      <div className="mt-6 flex justify-center">
-        <TimerCircle
-          duration={question.timeLimit}
-          start
-          onComplete={() => {
-            setTimerCompleted(true);
-            updateGameState(GameState.QUESTION_RESULT);
-          }}
-        />
-      </div>
-    );
-  }
-  return null;
-};
+    if (
+      quiz &&
+      quiz.gameState === GameState.QUESTION_ACTIVE &&
+      question &&
+      !timerCompleted
+    ) {
+      return (
+        <div className="mt-6 flex justify-center">
+          <TimerCircle
+            duration={question.timeLimit}
+            start
+            onComplete={() => {
+              setTimerCompleted(true);
+              updateGameState(GameState.QUESTION_RESULT);
+            }}
+          />
+        </div>
+      );
+    }
+    return null;
+  };
   // --------------------------------------------------
   // RESULTS DISPLAY FUNCTIONALITY
   // --------------------------------------------------
@@ -304,9 +334,8 @@ useEffect(() => {
     return (
       <Button
         onClick={onClick}
-        className={`p-4 rounded-lg font-bold text-white w-full md:w-auto ${
-          isActive ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-400'
-        }`}
+        className={`p-4 rounded-lg font-bold text-white w-full md:w-auto ${isActive ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-400'
+          }`}
       >
         {children}
       </Button>
@@ -327,59 +356,59 @@ useEffect(() => {
       <h1 className="text-3xl font-bold mb-6">{quiz.title}</h1>
 
       {/* QUESTION */}
-    {/* {quiz.gameState === GameState.QUESTION_INTRO && question && (
+      {/* {quiz.gameState === GameState.QUESTION_INTRO && question && (
   <div className="w-full max-w-3xl mb-8">
     <h2 className="text-xl font-bold text-center">
       Ready for next question
     </h2>
   </div>
 )} */}
-{quiz.gameState === GameState.QUESTION_ACTIVE && question && (
-  <div className="w-full max-w-3xl mb-8">
-    <h2 className="text-xl font-bold mb-6 text-center">
-      {question.text}
-    </h2>
+      {quiz.gameState === GameState.QUESTION_ACTIVE && question && (
+        <div className="w-full max-w-3xl mb-8">
+          <h2 className="text-xl font-bold mb-6 text-center">
+            {question.text}
+          </h2>
 
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      {question.options.map((opt: string, index: number) => (
-        <div
-          key={index}
-          className="p-4 bg-slate-200 rounded-lg text-center font-semibold"
-        >
-          {opt}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {question.options.map((opt: string, index: number) => (
+              <div
+                key={index}
+                className="p-4 bg-slate-200 rounded-lg text-center font-semibold"
+              >
+                {opt}
+              </div>
+            ))}
+          </div>
+
+          <TimerCircleWrapper />
         </div>
-      ))}
-    </div>
+      )}
+      {quiz.gameState === GameState.QUESTION_RESULT && question && (
+        <div className="w-full max-w-3xl mb-8">
+          <h2 className="text-xl font-bold mb-6 text-center">
+            Results for: {question.text}
+          </h2>
 
-    <TimerCircleWrapper />
-  </div>
-)}
-{quiz.gameState === GameState.QUESTION_RESULT && question && (
-  <div className="w-full max-w-3xl mb-8">
-    <h2 className="text-xl font-bold mb-6 text-center">
-      Results for: {question.text}
-    </h2>
-
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      {question.options.map((opt, index) => (
-        <div
-          key={index}
-          className="p-4 bg-slate-200 rounded-lg text-center font-semibold"
-        >
-          {opt}
-          <div className="text-sm text-gray-600">
-            {answerCounts[index]} responses
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {question.options.map((opt, index) => (
+              <div
+                key={index}
+                className="p-4 bg-slate-200 rounded-lg text-center font-semibold"
+              >
+                {opt}
+                <div className="text-sm text-gray-600">
+                  {answerCounts[index]} responses
+                </div>
+              </div>
+            ))}
           </div>
         </div>
-      ))}
-    </div>
-  </div>
-)}
+      )}
 
-      
 
-     {/* ================= LEADERBOARD (FULL SCREEN) ================= */}
-{quiz.gameState === GameState.LEADERBOARD && (
+
+      {/* ================= LEADERBOARD (FULL SCREEN) ================= */}
+      {quiz.gameState === GameState.LEADERBOARD && quiz.config && (
   <IntermediateLeaderboard
     players={players}
     quiz={quiz}
@@ -388,8 +417,8 @@ useEffect(() => {
 )}
 
       {/* CONTROLS */}
-      {/* <div className="mt-8 flex gap-4">
-        {quiz.gameState === GameState.QUESTION_INTRO && (
+      <div className="mt-8 flex gap-4">
+        {/* {quiz.gameState === GameState.QUESTION_INTRO && (
           <StyledButton
             onClick={() => updateGameState(GameState.QUESTION_ACTIVE)}
             isActive={true}
@@ -399,18 +428,18 @@ useEffect(() => {
         )} */}
 
         {quiz.gameState === GameState.QUESTION_ACTIVE && (
-  <StyledButton
-    onClick={() => {
-      if (!timerCompleted) {
-        setTimerCompleted(true);
-      }
-      updateGameState(GameState.QUESTION_RESULT);
-    }}
-    isActive
-  >
-    Show Results
-  </StyledButton>
-)}
+          <StyledButton
+            onClick={() => {
+              if (!timerCompleted) {
+                setTimerCompleted(true);
+              }
+              updateGameState(GameState.QUESTION_RESULT);
+            }}
+            isActive
+          >
+            Show Results
+          </StyledButton>
+        )}
 
         {quiz.gameState === GameState.QUESTION_RESULT && (
           <StyledButton
