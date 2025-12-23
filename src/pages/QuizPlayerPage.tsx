@@ -102,31 +102,34 @@ useEffect(() => {
 
     setLoading(false);
   };
+  useEffect(() => {
+  fetchData();
+}, [quizId]);
 
   // --------------------------------------------------
   // REALTIME LISTENER (HOST → PLAYER SYNC)
   // --------------------------------------------------
-  useEffect(() => {
-    fetchData();
+  // useEffect(() => {
+  //   fetchData();
 
-    const channel = supabase
-      .channel(`player-${quizId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'quiz_master_structure',
-          filter: `quiz_id=eq.${quizId}`,
-        },
-        () => fetchData()
-      )
-      .subscribe();
+  //   const channel = supabase
+  //     .channel(`player-${quizId}`)
+  //     .on(
+  //       'postgres_changes',
+  //       {
+  //         event: '*',
+  //         schema: 'public',
+  //         table: 'quiz_master_structure',
+  //         filter: `quiz_id=eq.${quizId}`,
+  //       },
+  //       () => fetchData()
+  //     )
+  //     .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [quizId]);
+  //   return () => {
+  //     supabase.removeChannel(channel);
+  //   };
+  // }, [quizId]);
  useEffect(() => {
   if (!quizId) return;
 
@@ -141,12 +144,7 @@ useEffect(() => {
         filter: `quiz_id=eq.${quizId}`,
       },
       payload => {
-        setQuiz(prev => ({
-          ...prev,
-          gameState: payload.new.game_state,
-          currentIndex: payload.new.current_question_index,
-          showQuestionToPlayers: payload.new.show_question_to_players,
-        }));
+        setQuiz(payload.new);
       }
     )
     .subscribe();

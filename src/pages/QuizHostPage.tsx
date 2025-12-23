@@ -6,13 +6,21 @@ import { TimerCircle } from '../components/TimerCircle';
 import { IntermediateLeaderboard } from '../components/IntermediateLeaderboard';
 import Button from '../components/Button';
 import { GameState, QuestionType } from '../../types';
+interface QuizPlayer {
+  quiz_id: string;
+  player_id: string;
+  player_name: string;
+  score: number;
+}
 
 const QuizHostPage = () => {
   const { quizId } = useParams<{ quizId: string }>();
 
   const [quiz, setQuiz] = useState<any>(null);
   
-  const [players, setPlayers] = useState<any[]>([]);
+  //const [players, setPlayers] = useState<any[]>([]);
+  const [players, setPlayers] = useState<QuizPlayer[]>([]);
+
   const [answers, setAnswers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [timerCompleted, setTimerCompleted] = useState(false);
@@ -158,6 +166,49 @@ useEffect(() => {
       supabase.removeChannel(channel);
     };
   }, [quizId]);
+// --------------------------------------------------
+// REALTIME: PLAYER SCORES (LEADERBOARD FIX 🔥)
+// --------------------------------------------------
+// --------------------------------------------------
+// REALTIME: PLAYER SCORES (LEADERBOARD FIX 🔥)
+// --------------------------------------------------
+useEffect(() => {
+  if (!quizId) return;
+
+  const channel = supabase
+    .channel(`players-${quizId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'quiz_players',
+        filter: `quiz_id=eq.${quizId}`,
+      },
+      payload => {
+        const newPlayer = payload.new as QuizPlayer; // ✅ FIX
+
+        setPlayers(prev => {
+          const updated = [...prev];
+
+          const idx = updated.findIndex(
+            p => p.player_id === newPlayer.player_id
+          );
+
+          if (idx >= 0) {
+            updated[idx] = newPlayer;
+          } else {
+            updated.push(newPlayer);
+          }
+
+          return updated.sort((a, b) => b.score - a.score);
+        });
+      }
+    )
+    .subscribe();
+
+  return () => supabase.removeChannel(channel);
+}, [quizId]);
 
   // --------------------------------------------------
   // CURRENT QUESTION
@@ -354,8 +405,9 @@ const isLastQuestion = useMemo(() => {
 
       {/* CONTROLS */}
     
-        <div className="mt-8 flex gap-4">
+             <div className="mt-8 flex gap-4">
   {/* QUESTION → RESULT */}
+ {/* QUESTION → RESULT */}
   {quiz.gameState === GameState.QUESTION_ACTIVE && (
     <Button
       onClick={() => updateGameState(GameState.QUESTION_RESULT)}
@@ -386,9 +438,11 @@ const isLastQuestion = useMemo(() => {
       Next Question
     </Button>
   )}
+
+
+  
 </div>
 
-      
     </div>
   );
 };
