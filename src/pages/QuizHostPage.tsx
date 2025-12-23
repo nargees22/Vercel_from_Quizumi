@@ -388,7 +388,7 @@ useEffect(() => {
 )}
 
       {/* CONTROLS */}
-      <div className="mt-8 flex gap-4">
+      {/* <div className="mt-8 flex gap-4">
         {quiz.gameState === GameState.QUESTION_INTRO && (
           <StyledButton
             onClick={() => updateGameState(GameState.QUESTION_ACTIVE)}
@@ -396,7 +396,7 @@ useEffect(() => {
           >
             Start Question (Show to Players)
           </StyledButton>
-        )}
+        )} */}
 
         {quiz.gameState === GameState.QUESTION_ACTIVE && (
   <StyledButton
