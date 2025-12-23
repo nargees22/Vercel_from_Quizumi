@@ -327,13 +327,13 @@ useEffect(() => {
       <h1 className="text-3xl font-bold mb-6">{quiz.title}</h1>
 
       {/* QUESTION */}
-    {quiz.gameState === GameState.QUESTION_INTRO && question && (
+    {/* {quiz.gameState === GameState.QUESTION_INTRO && question && (
   <div className="w-full max-w-3xl mb-8">
     <h2 className="text-xl font-bold text-center">
       Ready for next question
     </h2>
   </div>
-)}
+)} */}
 {quiz.gameState === GameState.QUESTION_ACTIVE && question && (
   <div className="w-full max-w-3xl mb-8">
     <h2 className="text-xl font-bold mb-6 text-center">
@@ -379,9 +379,108 @@ useEffect(() => {
       
 
       {/* LEADERBOARD */}
-      {quiz.gameState === GameState.LEADERBOARD && (
-        <IntermediateLeaderboard players={players} quiz={quiz} animate />
+      <div className="p-6 flex flex-col items-center">
+  <h1 className="text-3xl font-bold mb-6">{quiz.title}</h1>
+
+  {/* ================= LEADERBOARD (FULL SCREEN) ================= */}
+  {quiz.gameState === GameState.LEADERBOARD && (
+    <IntermediateLeaderboard
+      players={players}
+      quiz={quiz}
+      animate
+    />
+  )}
+
+  {/* ================= QUESTION / RESULT SCREENS ================= */}
+  {quiz.gameState !== GameState.LEADERBOARD && (
+    <>
+      {/* ACTIVE QUESTION */}
+      {quiz.gameState === GameState.QUESTION_ACTIVE && question && (
+        <div className="w-full max-w-3xl mb-8">
+          <h2 className="text-xl font-bold mb-6 text-center">
+            {question.text}
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {question.options.map((opt, index) => (
+              <div
+                key={index}
+                className="p-4 bg-slate-200 rounded-lg text-center font-semibold"
+              >
+                {opt}
+              </div>
+            ))}
+          </div>
+
+          <TimerCircleWrapper />
+        </div>
       )}
+
+      {/* RESULTS */}
+      {quiz.gameState === GameState.QUESTION_RESULT && question && (
+        <div className="w-full max-w-3xl mb-8">
+          <h2 className="text-xl font-bold mb-6 text-center">
+            Results for: {question.text}
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {question.options.map((opt, index) => (
+              <div
+                key={index}
+                className="p-4 bg-slate-200 rounded-lg text-center font-semibold"
+              >
+                {opt}
+                <div className="text-sm text-gray-600">
+                  {answerCounts[index]} responses
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </>
+  )}
+
+  {/* ================= CONTROLS ================= */}
+  <div className="mt-8 flex gap-4">
+    {quiz.gameState === GameState.QUESTION_INTRO && (
+      <StyledButton
+        onClick={() => updateGameState(GameState.QUESTION_ACTIVE)}
+        isActive
+      >
+        Start Question (Show to Players)
+      </StyledButton>
+    )}
+
+    {quiz.gameState === GameState.QUESTION_ACTIVE && (
+      <StyledButton
+        onClick={() => updateGameState(GameState.QUESTION_RESULT)}
+        isActive
+      >
+        Show Results
+      </StyledButton>
+    )}
+
+    {quiz.gameState === GameState.QUESTION_RESULT && (
+      <StyledButton
+        onClick={() => updateGameState(GameState.LEADERBOARD)}
+        isActive
+      >
+        Show Leaderboard
+      </StyledButton>
+    )}
+
+    {quiz.gameState === GameState.LEADERBOARD && (
+      <StyledButton
+        onClick={() => updateGameState(GameState.QUESTION_INTRO)}
+        isActive
+      >
+        Next Question
+      </StyledButton>
+    )}
+  </div>
+</div>
+
 
       {/* CONTROLS */}
       <div className="mt-8 flex gap-4">
