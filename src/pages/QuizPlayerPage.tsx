@@ -23,6 +23,10 @@ const QuizPlayerPage = () => {
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [answerResult, setAnswerResult] = useState<'correct' | 'wrong' | null>(null);
   const [loading, setLoading] = useState(true);
+  const questionStartRef = React.useRef<number | null>(null);
+  const [players, setPlayers] = useState<any[]>([]);
+
+
 
   // --------------------------------------------------
   // STABLE PLAYER ID (persists on refresh)
@@ -35,6 +39,24 @@ const QuizPlayerPage = () => {
     }
     return id;
   }, []);
+const fetchPlayers = async () => {
+  if (!quizId) return;
+
+  const { data, error } = await supabase
+    .from('quiz_players')
+    .select('*')
+    .eq('quiz_id', quizId)
+    .order('score', { ascending: false });
+
+  if (!error && data) {
+    setPlayers(data);
+  }
+};
+useEffect(() => {
+  if (quiz?.game_state === GameState.LEADERBOARD) {
+    fetchPlayers();
+  }
+}, [quiz?.game_state]);
 
   // --------------------------------------------------
   // FETCH QUIZ + QUESTIONS
@@ -62,11 +84,12 @@ const QuizPlayerPage = () => {
       setQuiz(quizData);
 
       // ✅ REGISTER PLAYER (UPSERT SAFE)
-      await supabase.from('players').upsert({
-        quiz_id: quizId,
-        player_id: playerId,
-        player_name: `Player-${playerId.slice(0, 4)}`,
-      });
+      await supabase.from('quiz_players').upsert({
+  quiz_id: quizId,
+  player_id: playerId,
+  player_name: `Player-${playerId.slice(0, 4)}`,
+  score: 0,
+});
     }
 
     if (questionData) setQuestions(questionData);
@@ -102,10 +125,14 @@ const QuizPlayerPage = () => {
   // --------------------------------------------------
   // RESET UI ON QUESTION CHANGE
   // --------------------------------------------------
-  useEffect(() => {
-    setSelectedAnswer(null);
-    setAnswerResult(null);
-  }, [quiz?.current_question_index]);
+ useEffect(() => {
+  setSelectedAnswer(null);
+  setAnswerResult(null);
+
+  // ⏱ start timing for this question
+  questionStartRef.current = Date.now();
+}, [quiz?.current_question_index]);
+
 
   // --------------------------------------------------
   // GUARDS
@@ -176,22 +203,59 @@ const QuizPlayerPage = () => {
     //     console.error('Failed to submit answer:', error);
     //   }
     // };
+// const handleSelect = async (index: number) => {
+//   if (selectedAnswer !== null) return;
+
+//   setSelectedAnswer(index);
+
+//   setAnswerResult(
+//     index === question.correct_answer_index ? 'correct' : 'wrong'
+//   );
+
+//   await supabase.from('quiz_answers').insert({
+//     quiz_id: quiz.quiz_id,
+//     player_id: quiz.player_id ?? 'anonymous',
+//     question_id: String(question.pk_id), // ✅ STRING
+//     answer: { index },                   // ✅ JSONB
+//     score: index === question.correct_answer_index ? 1 : 0,
+//   });
+// };
 const handleSelect = async (index: number) => {
-  if (selectedAnswer !== null) return;
+  if (selectedAnswer !== null || !questionStartRef.current) return;
 
   setSelectedAnswer(index);
 
-  setAnswerResult(
-    index === question.correct_answer_index ? 'correct' : 'wrong'
-  );
+  const timeTaken =
+    (Date.now() - questionStartRef.current) / 1000;
 
+  const isCorrect = index === question.correct_answer_index;
+
+  // 🎯 TIME-BASED SCORE
+  let score = 0;
+  if (isCorrect) {
+    score = Math.round(
+      1000 + Math.max(0, (1 - timeTaken / 30)) * 1000
+    );
+  }
+
+  setAnswerResult(isCorrect ? 'correct' : 'wrong');
+
+  // 1️⃣ Save answer
   await supabase.from('quiz_answers').insert({
-    quiz_id: quiz.quiz_id,
-    player_id: quiz.player_id ?? 'anonymous',
-    question_id: String(question.pk_id), // ✅ STRING
-    answer: { index },                   // ✅ JSONB
-    score: index === question.correct_answer_index ? 1 : 0,
+    quiz_id: quizId,
+    player_id: playerId,
+    question_id: String(question.pk_id),
+    answer: { index },
+    time_taken: timeTaken,
+    score,
   });
+
+  // 2️⃣ Update total player score
+  await supabase
+    .from('quiz_players')
+    .update({ score: supabase.rpc('coalesce_score', { val: score }) })
+    .eq('quiz_id', quizId)
+    .eq('player_id', playerId);
 };
 
     return (
@@ -236,9 +300,39 @@ const handleSelect = async (index: number) => {
   // --------------------------------------------------
   // WAITING STATE
   // --------------------------------------------------
-  if (quiz.game_state === GameState.QUESTION_RESULT) {
-    return <PageLoader message="Waiting for next question..." />;
-  }
+  // if (quiz.game_state === GameState.QUESTION_RESULT) {
+  //   return <PageLoader message="Waiting for next question..." />;
+  // }
+if (quiz.game_state === GameState.LEADERBOARD) {
+  return (
+    <div className="max-w-xl mx-auto p-6">
+      <h1 className="text-3xl font-bold mb-6 text-center">
+        🏆 Leaderboard
+      </h1>
+
+      {players.length === 0 && (
+        <p className="text-center text-slate-500">
+          No scores yet
+        </p>
+      )}
+
+      {players.map((player, index) => (
+        <div
+          key={player.player_id}
+          className="flex justify-between items-center bg-white p-4 mb-2 rounded shadow"
+        >
+          <span className="font-bold">
+            #{index + 1} {player.player_name}
+          </span>
+
+          <span className="text-gl-orange-600 font-bold">
+            {player.score} pts
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
 
   // --------------------------------------------------
   // FINISHED

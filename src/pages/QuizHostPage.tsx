@@ -206,6 +206,10 @@ const QuizHostPage = () => {
       .eq('quiz_id', quizId);
   };
 
+  const isLastQuestion =
+  quiz.currentIndex === quiz.questions.length - 1;
+
+
   // --------------------------------------------------
   // TIMER (ONLY IN QUESTION_ACTIVE)
   // --------------------------------------------------
@@ -288,6 +292,7 @@ const QuizHostPage = () => {
 
       {/* CONTROLS */}
       <div className="mt-8 flex gap-4">
+        {/* SHOW RESULTS */}
         {quiz.gameState === GameState.QUESTION_ACTIVE && (
           <Button
             onClick={() => updateGameState(GameState.QUESTION_RESULT)}
@@ -297,29 +302,31 @@ const QuizHostPage = () => {
           </Button>
         )}
 
-        {quiz.gameState === GameState.QUESTION_RESULT && (
-          <Button
-            onClick={() => updateGameState(GameState.LEADERBOARD)}
-            className="bg-blue-600 hover:bg-blue-700"
-          >
-            Show Leaderboard
-          </Button>
-        )}
-
-        {quiz.gameState === GameState.LEADERBOARD && (
-          <Button
-            onClick={() => {
-              if (quiz.currentIndex + 1 < quiz.questions.length) {
-                updateGameState(GameState.QUESTION_ACTIVE);
-              } else {
-                alert('Quiz completed!');
-              }
-            }}
-            className="bg-gl-orange-600 hover:bg-gl-orange-700"
-          >
-            Next Question
-          </Button>
-        )}
+        {/* SHOW LEADERBOARD (NORMAL QUESTIONS) */}
+  {quiz.gameState === GameState.QUESTION_RESULT && !isLastQuestion && (
+    <Button
+      onClick={() => updateGameState(GameState.LEADERBOARD)}
+      className="bg-blue-600 hover:bg-blue-700"
+    >
+      Show Leaderboard
+    </Button>
+  )}
+  {/* FINAL LEADERBOARD (LAST QUESTION ONLY) */}
+  {quiz.gameState === GameState.QUESTION_RESULT && isLastQuestion && (
+    <Button
+      onClick={() => updateGameState(GameState.LEADERBOARD)}
+      className="bg-gl-orange-600 hover:bg-gl-orange-700"
+    >
+      Final Leaderboard
+    </Button>
+  )}{quiz.gameState === GameState.LEADERBOARD && !isLastQuestion && (
+    <Button
+      onClick={() => updateGameState(GameState.QUESTION_ACTIVE)}
+      className="bg-gl-orange-600 hover:bg-gl-orange-700"
+    >
+      Next Question
+    </Button>
+  )}
       </div>
     </div>
   );
