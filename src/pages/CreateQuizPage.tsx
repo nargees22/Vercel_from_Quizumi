@@ -731,13 +731,11 @@ setIsCustomQuestionValid(false);
     quiz_id: quizId,
     title: finalTitle,
     organizer_name: organizerName!,
-    //game_state: GameState.LOBBY,
-      game_state: GameState.QUESTION_ACTIVE,
+    game_state: GameState.LOBBY,
     is_draft: false,
 
     show_live_response_count: quizConfig.showLiveResponseCount,
-    //show_question_to_players: quizConfig.showQuestionToPlayers,
-    show_question_to_players: true,
+    show_question_to_players: quizConfig.showQuestionToPlayers,
     clan_based: quizConfig.clanBased,
     titan_name: quizConfig.clanNames?.[Clan.TITANS] ?? null,
     defender_name: quizConfig.clanNames?.[Clan.DEFENDERS] ?? null,
@@ -800,8 +798,8 @@ setIsCustomQuestionValid(false);
 // //navigate(`/lobby/${quizId}`);
 
 
-navigate(`/lobby/${quizId}`);
-//navigate(`/quiz/host/${quizId}`);
+//navigate(`/lobby/${quizId}`);
+navigate(`/quiz/host/${quizId}`);
 
 
 
