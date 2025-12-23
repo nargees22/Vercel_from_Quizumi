@@ -807,21 +807,21 @@ navigate(`/lobby/${quizId}`);
 };
 
 
-    // const handleReuseQuiz = (quizToReuse: Quiz) => {
-    //     if (agendaInfo.agendaName) {
-    //         const prefix = `${agendaInfo.agendaName} - `;
-    //         if (quizToReuse.title.startsWith(prefix)) {
-    //             const dynamicPart = quizToReuse.title.substring(prefix.length);
-    //             setDynamicTitle(dynamicPart);
-    //         } else {
-    //             setDynamicTitle(quizToReuse.title);
-    //         }
-    //     } else {
-    //         setTitle(quizToReuse.title);
-    //     }
-    //     setQuestions(quizToReuse.questions);
-    //     setView('library'); // Stays in the library view to allow adding more questions
-    // };
+    const handleReuseQuiz = (quizToReuse: Quiz) => {
+        if (agendaInfo.agendaName) {
+            const prefix = `${agendaInfo.agendaName} - `;
+            if (quizToReuse.title.startsWith(prefix)) {
+                const dynamicPart = quizToReuse.title.substring(prefix.length);
+                setDynamicTitle(dynamicPart);
+            } else {
+                setDynamicTitle(quizToReuse.title);
+            }
+        } else {
+            setTitle(quizToReuse.title);
+        }
+        setQuestions(quizToReuse.questions);
+        setView('library'); // Stays in the library view to allow adding more questions
+    };
 
     // const handleArchiveQuiz = async (quizId: string) => {
     //     if (window.confirm('Are you sure you want to archive this quiz? It will be hidden from this list but its data will be preserved for analytics.')) {
@@ -1562,12 +1562,12 @@ setTechnologies(prev => {
                         <button onClick={() => setView('library')} className={`py-2 px-4 font-semibold whitespace-nowrap ${view === 'library' ? 'text-gl-orange-600 border-b-2 border-gl-orange-600' : 'text-slate-500'}`}>Library</button>
                        { <button onClick={() => setView('custom')} className={`py-2 px-4 font-semibold whitespace-nowrap ${view === 'custom' ? 'text-gl-orange-600 border-b-2 border-gl-orange-600' : 'text-slate-500'}`}>Add Custom</button>}
                        <button
-  onClick={() => {
-    setCustomQuestion(EMPTY_CUSTOM_QUESTION);
-    setCustomFormErrors({ technology: '', skill: '' });
-    setIsCustomQuestionValid(false);
-    setView('custom');
-  }}
+//   onClick={() => {
+//     setCustomQuestion(EMPTY_CUSTOM_QUESTION);
+//     setCustomFormErrors({ technology: '', skill: '' });
+//     setIsCustomQuestionValid(false);
+//     setView('custom');
+//   }}
 >
   
 </button>
@@ -1622,7 +1622,7 @@ const isExpanded = expandedPastQuizGroup === groupKey;
 
                                                     return (
                                                         <div key={title} className="p-4 rounded-xl border bg-white border-slate-200 shadow-sm transition-all">
-                                                            <button onClick={() => setExpandedPastQuizGroup(isExpanded ? null : title)} className="w-full flex justify-between items-center text-left gap-4" aria-expanded={isExpanded} aria-controls={`past-quiz-group-${title.replace(/\s+/g, '-')}`}>
+                                                            <button onClick={() => setExpandedPastQuizGroup(isExpanded ? null : groupKey)} className="w-full flex justify-between items-center text-left gap-4" aria-expanded={isExpanded} aria-controls={`past-quiz-group-${title.replace(/\s+/g, '-')}`}>
                                                                 <p className="font-bold text-lg text-slate-800 truncate">{title}</p>
                                                                 <div className="flex items-center gap-4 flex-shrink-0">
                                                                     <span className="bg-slate-100 text-slate-700 px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap">{quizzes.length} {quizzes.length === 1 ? 'Instance' : 'Instances'}</span>
@@ -1631,11 +1631,29 @@ const isExpanded = expandedPastQuizGroup === groupKey;
                                                             </button>
                                                             {isExpanded && (
                                                                 <div id={`past-quiz-group-${title.replace(/\s+/g, '-')}`} className="mt-4 pt-4 border-t border-slate-200 space-y-3 animate-fade-in">
-                                                                    {pastQuizzes.map(q => (
-                                                                        <div key={q.id}>
-                                                                            {/* Render quiz details here */}
-                                                                        </div>
-                                                                    ))}
+                                                                    {quizzes.map(q => (
+  <div
+    key={q.id}
+    className="flex justify-between items-center bg-slate-50 p-3 rounded-lg"
+  >
+    <div>
+      <p className="font-semibold text-slate-700">{q.title}</p>
+      <p className="text-xs text-slate-500">
+        Created on {new Date(q.createdAt).toLocaleDateString()}
+      </p>
+    </div>
+
+    <div className="flex gap-2">
+      <button
+        onClick={() => handleReuseQuiz(q)}
+        className="text-sm font-bold text-white bg-gl-orange-600 hover:bg-gl-orange-700 px-3 py-1.5 rounded-lg transition-colors"
+      >
+        Reuse
+      </button>
+    </div>
+  </div>
+))}
+
                                                                 </div>
                                                             )}
                                                         </div>
