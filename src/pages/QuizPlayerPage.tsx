@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../service/supabase';
 import { PageLoader } from '../components/PageLoader';
@@ -25,7 +25,19 @@ const QuizPlayerPage = () => {
   const [loading, setLoading] = useState(true);
 
   // --------------------------------------------------
-  // FETCH QUIZ + QUESTIONS (single source of truth)
+  // STABLE PLAYER ID (persists on refresh)
+  // --------------------------------------------------
+  const playerId = useMemo(() => {
+    let id = localStorage.getItem('player_id');
+    if (!id) {
+      id = crypto.randomUUID();
+      localStorage.setItem('player_id', id);
+    }
+    return id;
+  }, []);
+
+  // --------------------------------------------------
+  // FETCH QUIZ + QUESTIONS
   // --------------------------------------------------
   const fetchData = async () => {
     if (!quizId) return;
@@ -46,14 +58,24 @@ const QuizPlayerPage = () => {
         .order('question_order'),
     ]);
 
-    if (quizData) setQuiz(quizData);
+    if (quizData) {
+      setQuiz(quizData);
+
+      // ✅ REGISTER PLAYER (UPSERT SAFE)
+      await supabase.from('players').upsert({
+        quiz_id: quizId,
+        player_id: playerId,
+        player_name: `Player-${playerId.slice(0, 4)}`,
+      });
+    }
+
     if (questionData) setQuestions(questionData);
 
     setLoading(false);
   };
 
   // --------------------------------------------------
-  // REALTIME LISTENER (THIS FIXES REFRESH ISSUE)
+  // REALTIME LISTENER (HOST → PLAYER SYNC)
   // --------------------------------------------------
   useEffect(() => {
     fetchData();
@@ -68,10 +90,7 @@ const QuizPlayerPage = () => {
           table: 'quiz_master_structure',
           filter: `quiz_id=eq.${quizId}`,
         },
-        (payload) => {
-          console.log('🔄 Quiz updated:', payload.new);
-          fetchData();
-        }
+        () => fetchData()
       )
       .subscribe();
 
@@ -81,12 +100,12 @@ const QuizPlayerPage = () => {
   }, [quizId]);
 
   // --------------------------------------------------
-  // RESET STATE WHEN QUESTION CHANGES
+  // RESET UI ON QUESTION CHANGE
   // --------------------------------------------------
   useEffect(() => {
     setSelectedAnswer(null);
     setAnswerResult(null);
-  }, [quiz?.current_question_index, quiz?.show_question_to_players]);
+  }, [quiz?.current_question_index]);
 
   // --------------------------------------------------
   // GUARDS
@@ -110,13 +129,13 @@ const QuizPlayerPage = () => {
   }
 
   // --------------------------------------------------
-  // QUESTION SHOWN TO PLAYER
+  // QUESTION VIEW
   // --------------------------------------------------
- if (
-  quiz.game_state === GameState.QUESTION_ACTIVE &&
-  quiz.show_question_to_players &&
-  question
-){
+  if (
+    quiz.game_state === GameState.QUESTION_ACTIVE &&
+    quiz.show_question_to_players &&
+    question
+  ) {
     const options = [
       question.option_1,
       question.option_2,
@@ -124,16 +143,23 @@ const QuizPlayerPage = () => {
       question.option_4,
     ].filter(Boolean);
 
-    const handleSelect = (index: number) => {
+    // ✅ FINAL ANSWER HANDLER (DB WRITE)
+    const handleSelect = async (index: number) => {
       if (selectedAnswer !== null) return;
 
       setSelectedAnswer(index);
 
-      if (index === question.correct_answer_index) {
-        setAnswerResult('correct');
-      } else {
-        setAnswerResult('wrong');
-      }
+      const isCorrect = index === question.correct_answer_index;
+      setAnswerResult(isCorrect ? 'correct' : 'wrong');
+
+      // ✅ SAVE ANSWER
+      await supabase.from('player_answers').insert({
+        quiz_id: quizId,
+        player_id: playerId,
+        question_id: question.pk_id,
+        selected_answer_index: index,
+        is_correct: isCorrect,
+      });
     };
 
     return (
@@ -147,10 +173,10 @@ const QuizPlayerPage = () => {
             let bg = 'bg-slate-200';
 
             if (selectedAnswer !== null) {
-              if (index === question.correct_answer_index) bg = 'bg-green-500 text-white';
-              else if (index === selectedAnswer) bg = 'bg-red-500 text-white';
-            } else if (selectedAnswer === index) {
-              bg = 'bg-gl-orange-600 text-white';
+              if (index === question.correct_answer_index)
+                bg = 'bg-green-500 text-white';
+              else if (index === selectedAnswer)
+                bg = 'bg-red-500 text-white';
             }
 
             return (
@@ -158,6 +184,7 @@ const QuizPlayerPage = () => {
                 key={index}
                 className={`p-4 ${bg}`}
                 onClick={() => handleSelect(index)}
+                disabled={selectedAnswer !== null}
               >
                 {opt}
               </Button>
@@ -175,14 +202,14 @@ const QuizPlayerPage = () => {
   }
 
   // --------------------------------------------------
-  // WAITING FOR NEXT QUESTION / LEADERBOARD
+  // WAITING STATE
   // --------------------------------------------------
   if (quiz.game_state === GameState.QUESTION_RESULT) {
     return <PageLoader message="Waiting for next question..." />;
   }
 
   // --------------------------------------------------
-  // QUIZ FINISHED
+  // FINISHED
   // --------------------------------------------------
   if (quiz.game_state === GameState.FINISHED) {
     return (
