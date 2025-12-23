@@ -418,14 +418,14 @@ const QuizHostPage = () => {
 
       {/* CONTROLS */}
       <div className="mt-8 flex gap-4">
-        {/* {quiz.gameState === GameState.QUESTION_INTRO && (
+        {quiz.gameState === GameState.QUESTION_INTRO && (
           <StyledButton
             onClick={() => updateGameState(GameState.QUESTION_ACTIVE)}
             isActive={true}
           >
             Start Question (Show to Players)
           </StyledButton>
-        )} */}
+        )}
 
         {quiz.gameState === GameState.QUESTION_ACTIVE && (
           <StyledButton
