@@ -152,14 +152,20 @@ const QuizPlayerPage = () => {
       const isCorrect = index === question.correct_answer_index;
       setAnswerResult(isCorrect ? 'correct' : 'wrong');
 
-      // ✅ SAVE ANSWER
-      await supabase.from('player_answers').insert({
-        quiz_id: quizId,
-        player_id: playerId,
-        question_id: question.pk_id,
-        selected_answer_index: index,
-        is_correct: isCorrect,
-      });
+      // Send the answer to the database
+      try {
+        await supabase
+          .from('quiz_answers')
+          .insert({
+            quiz_id: quizId,
+            question_id: question.pk_id,
+            player_id: 'player_unique_id', // Replace with actual player ID
+            answer: index,
+            is_correct: isCorrect,
+          });
+      } catch (error) {
+        console.error('Failed to submit answer:', error);
+      }
     };
 
     return (

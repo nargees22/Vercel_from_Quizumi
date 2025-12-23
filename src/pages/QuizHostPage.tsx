@@ -224,7 +224,6 @@ const QuizHostPage = () => {
 
   // --------------------------------------------------
   // GUARDS
-  // --------------------------------------------------
   if (loading) return <PageLoader message="Loading host view..." />;
   if (!quizId || !quiz) return <PageLoader message="Invalid quiz" />;
 
