@@ -223,11 +223,11 @@ const QuizHostPage = () => {
     setQuiz((prev: any) => ({
       ...prev,
       gameState: next,
-      currentIndex:
-        next === GameState.QUESTION_INTRO &&
-          quiz.gameState === GameState.LEADERBOARD
-          ? prev.currentIndex + 1
-          : prev.currentIndex,
+       currentIndex:
+    next === GameState.QUESTION_ACTIVE &&
+    quiz.gameState === GameState.LEADERBOARD
+      ? prev.currentIndex + 1
+      : prev.currentIndex,
     }));
 
     if (next === GameState.QUESTION_ACTIVE) {
@@ -418,14 +418,14 @@ const QuizHostPage = () => {
 
       {/* CONTROLS */}
       <div className="mt-8 flex gap-4">
-        {quiz.gameState === GameState.QUESTION_INTRO && (
+        {/* {quiz.gameState === GameState.QUESTION_INTRO && (
           <StyledButton
             onClick={() => updateGameState(GameState.QUESTION_ACTIVE)}
             isActive={true}
           >
             Start Question (Show to Players)
           </StyledButton>
-        )}
+        )} */}
 
         {quiz.gameState === GameState.QUESTION_ACTIVE && (
           <StyledButton
@@ -455,7 +455,7 @@ const QuizHostPage = () => {
           <StyledButton
             onClick={() => {
               if (quiz.currentIndex + 1 < quiz.questions.length) {
-                updateGameState(GameState.QUESTION_INTRO);
+               updateGameState(GameState.QUESTION_ACTIVE);
               } else {
                 alert('Quiz completed!');
               }

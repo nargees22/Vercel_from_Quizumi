@@ -112,12 +112,11 @@ const QuizPlayerPage = () => {
   // --------------------------------------------------
   // QUESTION SHOWN TO PLAYER
   // --------------------------------------------------
-  if (
-    (quiz.game_state === GameState.QUESTION_ACTIVE ||
-      quiz.game_state === GameState.QUESTION_INTRO) &&
-    quiz.show_question_to_players &&
-    question
-  ) {
+ if (
+  quiz.game_state === GameState.QUESTION_ACTIVE &&
+  quiz.show_question_to_players &&
+  question
+){
     const options = [
       question.option_1,
       question.option_2,
