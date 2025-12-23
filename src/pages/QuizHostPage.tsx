@@ -42,7 +42,8 @@ const QuizHostPage = () => {
         supabase
           .from('quiz_players')
           .select('*')
-          .eq('quiz_id', quizId),
+          .eq('quiz_id', quizId)
+          .order('score', { ascending: false }),
       ]);
 
     if (!quizRow || !questionRows) {
@@ -109,6 +110,17 @@ const QuizHostPage = () => {
       supabase.removeChannel(channel);
     };
   }, [quizId]);
+useEffect(() => {
+  if (quiz?.gameState === GameState.LEADERBOARD) {
+    supabase
+      .from('quiz_players')
+      .select('*')
+      .eq('quiz_id', quizId)
+      .then(({ data }) => {
+        if (data) setPlayers(data);
+      });
+  }
+}, [quiz?.gameState, quizId]);
 
   // --------------------------------------------------
   // RESET ANSWERS & TIMER WHEN QUESTION CHANGES

@@ -121,6 +121,33 @@ useEffect(() => {
       supabase.removeChannel(channel);
     };
   }, [quizId]);
+  useEffect(() => {
+  if (!quizId) return;
+
+  const channel = supabase
+    .channel(`player-quiz-${quizId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'quiz_master_structure',
+        filter: `quiz_id=eq.${quizId}`,
+      },
+      payload => {
+        setQuiz(prev => ({
+          ...prev,
+          gameState: payload.new.game_state,
+          currentIndex: payload.new.current_question_index,
+          showQuestionToPlayers: payload.new.show_question_to_players,
+        }));
+      }
+    )
+    .subscribe();
+
+  return () => supabase.removeChannel(channel);
+}, [quizId]);
+
 
   // --------------------------------------------------
   // RESET UI ON QUESTION CHANGE
