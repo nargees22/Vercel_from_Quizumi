@@ -165,39 +165,55 @@ const QuizHostPage = () => {
 
   /* ---------------------- REALTIME: PLAYER SCORES ---------------------- */
 
-  useEffect(() => {
-    if (!quizId) return;
+  /* ---------------------- REALTIME: PLAYER SCORES ---------------------- */
 
-    const channel = supabase
-      .channel(`players-${quizId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'quiz_players',
-          filter: `quiz_id=eq.${quizId}`,
-        },
-        payload => {
-          const newPlayer = payload.new as QuizPlayer;
+useEffect(() => {
+  if (!quizId) return;
 
-          setPlayers(prev => {
-            const updated = [...prev];
-            const idx = updated.findIndex(
-              p => p.player_id === newPlayer.player_id
-            );
+  const channel = supabase
+    .channel(`players-${quizId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'quiz_players',
+        filter: `quiz_id=eq.${quizId}`,
+      },
+      payload => {
+        const newPlayer = payload.new as QuizPlayer;
 
-            if (idx >= 0) updated[idx] = newPlayer;
-            else updated.push(newPlayer);
+        setPlayers(prev => {
+          const updated = [...prev];
+          const idx = updated.findIndex(
+            p => p.player_id === newPlayer.player_id
+          );
 
-            return updated.sort((a, b) => b.score - a.score);
-          });
-        }
-      )
-      .subscribe();
+          if (idx >= 0) updated[idx] = newPlayer;
+          else updated.push(newPlayer);
 
-    return () => supabase.removeChannel(channel);
-  }, [quizId]);
+          return updated.sort((a, b) => b.score - a.score);
+        });
+      }
+    )
+    .subscribe();
+
+  return () => supabase.removeChannel(channel);
+}, [quizId]);
+/* ---------------------- FETCH LEADERBOARD ON HOST ---------------------- */
+
+useEffect(() => {
+  if (quiz?.gameState === GameState.LEADERBOARD && quizId) {
+    supabase
+      .from('quiz_players')
+      .select('*')
+      .eq('quiz_id', quizId)
+      .order('score', { ascending: false })
+      .then(({ data }) => {
+        if (data) setPlayers(data);
+      });
+  }
+}, [quiz?.gameState, quizId]);
 
   /* --------------------------- DERIVED VALUES --------------------------- */
 
@@ -284,14 +300,13 @@ const QuizHostPage = () => {
             ))}
           </div>
 
-          <TimerCircle
-            duration={question.timeLimit}
-            quizId={quizId}
-            questionIndex={quiz.currentIndex}
-            onComplete={() =>
-              updateGameState(GameState.QUESTION_RESULT)
-            }
-          />
+         <TimerCircle
+  duration={question.timeLimit}
+  quizId={quizId}
+  questionIndex={quiz.currentIndex}
+  onComplete={() => {}} // ❌ HOST should not auto-change state
+/>
+
         </div>
       )}
 
@@ -310,23 +325,34 @@ const QuizHostPage = () => {
       )}
 
       <div className="mt-8 flex gap-4">
-        {quiz.gameState === GameState.QUESTION_ACTIVE && (
-          <Button onClick={() => updateGameState(GameState.QUESTION_RESULT)}>
-            Show Results
-          </Button>
-        )}
+       {quiz.gameState === GameState.QUESTION_ACTIVE && (
+  <Button
+    onClick={() => updateGameState(GameState.QUESTION_RESULT)}
+    className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-bold"
+  >
+    Show Results
+  </Button>
+)}
 
-        {quiz.gameState === GameState.QUESTION_RESULT && (
-          <Button onClick={() => updateGameState(GameState.LEADERBOARD)}>
-            {isLastQuestion ? 'Final Leaderboard' : 'Show Leaderboard'}
-          </Button>
-        )}
+{quiz.gameState === GameState.QUESTION_RESULT && (
+  <Button
+    onClick={() => updateGameState(GameState.LEADERBOARD)}
+    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-bold"
+  >
+    {isLastQuestion ? 'Final Leaderboard' : 'Show Leaderboard'}
+  </Button>
+)}
 
-        {quiz.gameState === GameState.LEADERBOARD && !isLastQuestion && (
-          <Button onClick={() => updateGameState(GameState.QUESTION_ACTIVE)}>
-            Next Question
-          </Button>
-        )}
+
+       {quiz.gameState === GameState.LEADERBOARD && !isLastQuestion && (
+  <Button
+    onClick={() => updateGameState(GameState.QUESTION_ACTIVE)}
+    className="bg-gl-orange-600 hover:bg-gl-orange-700 text-white px-6 py-3 rounded-lg font-bold"
+  >
+    Next Question
+  </Button>
+)}
+
       </div>
     </div>
   );
