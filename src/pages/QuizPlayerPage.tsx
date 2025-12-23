@@ -39,24 +39,24 @@ const QuizPlayerPage = () => {
     }
     return id;
   }, []);
-const fetchPlayers = async () => {
-  if (!quizId) return;
+  const fetchPlayers = async () => {
+    if (!quizId) return;
 
-  const { data, error } = await supabase
-    .from('quiz_players')
-    .select('*')
-    .eq('quiz_id', quizId)
-    .order('score', { ascending: false });
+    const { data, error } = await supabase
+      .from('quiz_players')
+      .select('*')
+      .eq('quiz_id', quizId)
+      .order('score', { ascending: false });
 
-  if (!error && data) {
-    setPlayers(data);
-  }
-};
-useEffect(() => {
-  if (quiz?.game_state === GameState.LEADERBOARD) {
-    fetchPlayers();
-  }
-}, [quiz?.game_state]);
+    if (!error && data) {
+      setPlayers(data);
+    }
+  };
+  useEffect(() => {
+    if (quiz?.game_state === GameState.LEADERBOARD) {
+      fetchPlayers();
+    }
+  }, [quiz?.game_state]);
 
   // --------------------------------------------------
   // FETCH QUIZ + QUESTIONS
@@ -84,18 +84,7 @@ useEffect(() => {
       setQuiz(quizData);
 
       // ✅ REGISTER PLAYER (UPSERT SAFE)
-      await supabase
-    .from('quiz_players')
-    .upsert(
-      {
-        quiz_id: quizId,
-        player_id: playerId,
-        player_name: `Player-${playerId.slice(0, 4)}`,
-      },
-      {
-        onConflict: 'quiz_id,player_id',
-      }
-    );
+
     }
 
     if (questionData) setQuestions(questionData);
@@ -103,8 +92,21 @@ useEffect(() => {
     setLoading(false);
   };
   useEffect(() => {
-  fetchData();
-}, [quizId]);
+    fetchData();
+  }, [quizId]);
+
+const joinQuiz = async () => {
+  await supabase
+    .from('quiz_players')
+    .insert({
+      quiz_id: quizId,
+      player_id: playerId,
+      player_name: `Player-${playerId.slice(0, 4)}`,
+      score: 0,
+    });
+
+  fetchPlayers(); // optional refresh
+};
 
   // --------------------------------------------------
   // REALTIME LISTENER (HOST → PLAYER SYNC)
@@ -130,40 +132,40 @@ useEffect(() => {
   //     supabase.removeChannel(channel);
   //   };
   // }, [quizId]);
- useEffect(() => {
-  if (!quizId) return;
+  useEffect(() => {
+    if (!quizId) return;
 
-  const channel = supabase
-    .channel(`player-quiz-${quizId}`)
-    .on(
-      'postgres_changes',
-      {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'quiz_master_structure',
-        filter: `quiz_id=eq.${quizId}`,
-      },
-      payload => {
-        setQuiz(payload.new);
-      }
-    )
-    .subscribe();
+    const channel = supabase
+      .channel(`player-quiz-${quizId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'quiz_master_structure',
+          filter: `quiz_id=eq.${quizId}`,
+        },
+        payload => {
+          setQuiz(payload.new);
+        }
+      )
+      .subscribe();
 
-  return () => supabase.removeChannel(channel);
-}, [quizId]);
+    return () => supabase.removeChannel(channel);
+  }, [quizId]);
 
 
 
   // --------------------------------------------------
   // RESET UI ON QUESTION CHANGE
   // --------------------------------------------------
- useEffect(() => {
-  setSelectedAnswer(null);
-  setAnswerResult(null);
+  useEffect(() => {
+    setSelectedAnswer(null);
+    setAnswerResult(null);
 
-  // ⏱ start timing for this question
-  questionStartRef.current = Date.now();
-}, [quiz?.current_question_index]);
+    // ⏱ start timing for this question
+    questionStartRef.current = Date.now();
+  }, [quiz?.current_question_index]);
 
 
   // --------------------------------------------------
@@ -175,17 +177,34 @@ useEffect(() => {
 
   const question =
     typeof quiz.current_question_index === 'number' &&
-    quiz.current_question_index >= 0 &&
-    quiz.current_question_index < questions.length
+      quiz.current_question_index >= 0 &&
+      quiz.current_question_index < questions.length
       ? questions[quiz.current_question_index]
       : null;
 
   // --------------------------------------------------
   // LOBBY
   // --------------------------------------------------
+  // if (quiz.game_state === GameState.LOBBY) {
+  //   return <PageLoader message="Waiting for host to start the quiz..." />;
+  // }
   if (quiz.game_state === GameState.LOBBY) {
-    return <PageLoader message="Waiting for host to start the quiz..." />;
-  }
+  return (
+    <div className="flex flex-col items-center mt-20 gap-6">
+      <h1 className="text-2xl font-bold">
+        Waiting for host to start the quiz
+      </h1>
+
+      <Button
+        onClick={joinQuiz}
+        className="bg-gl-orange-600 hover:bg-gl-orange-700"
+      >
+        Join Quiz
+      </Button>
+    </div>
+  );
+}
+
 
   // --------------------------------------------------
   // QUESTION VIEW
@@ -235,70 +254,70 @@ useEffect(() => {
     //     console.error('Failed to submit answer:', error);
     //   }
     // };
-// const handleSelect = async (index: number) => {
-//   if (selectedAnswer !== null) return;
+    // const handleSelect = async (index: number) => {
+    //   if (selectedAnswer !== null) return;
 
-//   setSelectedAnswer(index);
+    //   setSelectedAnswer(index);
 
-//   setAnswerResult(
-//     index === question.correct_answer_index ? 'correct' : 'wrong'
-//   );
+    //   setAnswerResult(
+    //     index === question.correct_answer_index ? 'correct' : 'wrong'
+    //   );
 
-//   await supabase.from('quiz_answers').insert({
-//     quiz_id: quiz.quiz_id,
-//     player_id: quiz.player_id ?? 'anonymous',
-//     question_id: String(question.pk_id), // ✅ STRING
-//     answer: { index },                   // ✅ JSONB
-//     score: index === question.correct_answer_index ? 1 : 0,
-//   });
-// };
-const handleSelect = async (index: number) => {
-  if (selectedAnswer !== null || !questionStartRef.current) return;
+    //   await supabase.from('quiz_answers').insert({
+    //     quiz_id: quiz.quiz_id,
+    //     player_id: quiz.player_id ?? 'anonymous',
+    //     question_id: String(question.pk_id), // ✅ STRING
+    //     answer: { index },                   // ✅ JSONB
+    //     score: index === question.correct_answer_index ? 1 : 0,
+    //   });
+    // };
+    const handleSelect = async (index: number) => {
+      if (selectedAnswer !== null || !questionStartRef.current) return;
 
-  setSelectedAnswer(index);
+      setSelectedAnswer(index);
 
-  const timeTaken =
-    (Date.now() - questionStartRef.current) / 1000;
+      const timeTaken =
+        (Date.now() - questionStartRef.current) / 1000;
 
-  const isCorrect = index === question.correct_answer_index;
+      const isCorrect = index === question.correct_answer_index;
 
-  // 🎯 TIME-BASED SCORE
-  let score = 0;
-  if (isCorrect) {
-    score = Math.round(
-      1000 + Math.max(0, (1 - timeTaken / 30)) * 1000
-    );
-  }
+      // 🎯 TIME-BASED SCORE
+      let score = 0;
+      if (isCorrect) {
+        score = Math.round(
+          1000 + Math.max(0, (1 - timeTaken / 30)) * 1000
+        );
+      }
 
-  setAnswerResult(isCorrect ? 'correct' : 'wrong');
+      setAnswerResult(isCorrect ? 'correct' : 'wrong');
 
-  // 1️⃣ Save answer
-  await supabase.from('quiz_answers').insert({
-    quiz_id: quizId,
-    player_id: playerId,
-    question_id: String(question.pk_id),
-    answer: { index },
-    time_taken: timeTaken,
-    score,
-  });
+      // 1️⃣ Save answer
+      await supabase.from('quiz_answers').insert({
+        quiz_id: quizId,
+        player_id: playerId,
+        question_id: String(question.pk_id),
+        answer: { index },
+        time_taken: timeTaken,
+        score,
+      });
 
-  // 2️⃣ Update total player score
- const { data: currentPlayer } = await supabase
-  .from('quiz_players')
-  .select('score')
-  .eq('quiz_id', quizId)
-  .eq('player_id', playerId)
-  .single();
+      // 2️⃣ Update total player score
+      const { data: currentPlayer } = await supabase
+        .from('quiz_players')
+        .select('score')
+        .eq('quiz_id', quizId)
+        .eq('player_id', playerId)
+        .single();
 
-// 2️⃣ Update score properly
-await supabase
-  .from('quiz_players')
-  .update({
-    score: (currentPlayer?.score ?? 0) + score,
-  })
-  .eq('quiz_id', quizId)
-  .eq('player_id', playerId);
-};
+      // 2️⃣ Update score properly
+      await supabase
+        .from('quiz_players')
+        .update({
+          score: (currentPlayer?.score ?? 0) + score,
+        })
+        .eq('quiz_id', quizId)
+        .eq('player_id', playerId);
+    };
 
     return (
       <div className="p-6 max-w-3xl mx-auto text-center">
@@ -345,36 +364,36 @@ await supabase
   // if (quiz.game_state === GameState.QUESTION_RESULT) {
   //   return <PageLoader message="Waiting for next question..." />;
   // }
-if (quiz.game_state === GameState.LEADERBOARD) {
-  return (
-    <div className="max-w-xl mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-6 text-center">
-        🏆 Leaderboard
-      </h1>
+  if (quiz.game_state === GameState.LEADERBOARD) {
+    return (
+      <div className="max-w-xl mx-auto p-6">
+        <h1 className="text-3xl font-bold mb-6 text-center">
+          🏆 Leaderboard
+        </h1>
 
-      {players.length === 0 && (
-        <p className="text-center text-slate-500">
-          No scores yet
-        </p>
-      )}
+        {players.length === 0 && (
+          <p className="text-center text-slate-500">
+            No scores yet
+          </p>
+        )}
 
-      {players.map((player, index) => (
-        <div
-          key={player.player_id}
-          className="flex justify-between items-center bg-white p-4 mb-2 rounded shadow"
-        >
-          <span className="font-bold">
-            #{index + 1} {player.player_name}
-          </span>
+        {players.map((player, index) => (
+          <div
+            key={player.player_id}
+            className="flex justify-between items-center bg-white p-4 mb-2 rounded shadow"
+          >
+            <span className="font-bold">
+              #{index + 1} {player.player_name}
+            </span>
 
-          <span className="text-gl-orange-600 font-bold">
-            {player.score} pts
-          </span>
-        </div>
-      ))}
-    </div>
-  );
-}
+            <span className="text-gl-orange-600 font-bold">
+              {player.score} pts
+            </span>
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   // --------------------------------------------------
   // FINISHED

@@ -112,17 +112,24 @@ const QuizHostPage = () => {
           const row = payload.new as QuizMasterRow;
 
           setQuiz(prev => {
-            if (!prev || !row) return prev;
+    if (!prev || !row) return prev;
 
-            return {
-              ...prev,
-              gameState: row.game_state,
-              currentIndex:
-                row.current_question_index ?? prev.currentIndex,
-              showQuestionToPlayers:
-                row.show_question_to_players,
-            };
-          });
+    return {
+      ...prev,
+      gameState: row.game_state,
+      currentIndex:
+        row.current_question_index ?? prev.currentIndex,
+      showQuestionToPlayers: row.show_question_to_players,
+
+      // ✅ GUARANTEE CONFIG NEVER DISAPPEARS
+      config: prev.config ?? {
+        clanBased: false,
+        titanName: null,
+        defenderName: null,
+        clanAssignment: null,
+      },
+    };
+  });
         }
       )
       .subscribe();
