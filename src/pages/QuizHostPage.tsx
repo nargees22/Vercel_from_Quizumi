@@ -111,16 +111,18 @@ const QuizHostPage = () => {
     };
   }, [quizId]);
 useEffect(() => {
-  if (quiz?.gameState === GameState.LEADERBOARD) {
+  if (quiz?.gameState === GameState.LEADERBOARD && quizId) {
     supabase
       .from('quiz_players')
       .select('*')
       .eq('quiz_id', quizId)
+      .order('score', { ascending: false })
       .then(({ data }) => {
         if (data) setPlayers(data);
       });
   }
 }, [quiz?.gameState, quizId]);
+
 
   // --------------------------------------------------
   // RESET ANSWERS & TIMER WHEN QUESTION CHANGES
@@ -338,10 +340,20 @@ const isLastQuestion = useMemo(() => {
         </div>
       )}
 
-      
+      {/* LEADERBOARD */}
+{quiz.gameState === GameState.LEADERBOARD && (
+  <div className="w-full max-w-3xl mb-8">
+    <IntermediateLeaderboard
+      players={players}
+      quiz={quiz}
+      animate
+    />
+  </div>
+)}
+
 
       {/* CONTROLS */}
-      <div className="mt-8 flex gap-4">
+    
         <div className="mt-8 flex gap-4">
   {/* QUESTION → RESULT */}
   {quiz.gameState === GameState.QUESTION_ACTIVE && (
@@ -376,7 +388,7 @@ const isLastQuestion = useMemo(() => {
   )}
 </div>
 
-      </div>
+      
     </div>
   );
 };

@@ -84,12 +84,18 @@ useEffect(() => {
       setQuiz(quizData);
 
       // ✅ REGISTER PLAYER (UPSERT SAFE)
-      await supabase.from('quiz_players').upsert({
-  quiz_id: quizId,
-  player_id: playerId,
-  player_name: `Player-${playerId.slice(0, 4)}`,
-  score: 0,
-});
+      await supabase
+    .from('quiz_players')
+    .upsert(
+      {
+        quiz_id: quizId,
+        player_id: playerId,
+        player_name: `Player-${playerId.slice(0, 4)}`,
+      },
+      {
+        onConflict: 'quiz_id,player_id',
+      }
+    );
     }
 
     if (questionData) setQuestions(questionData);
@@ -121,7 +127,7 @@ useEffect(() => {
       supabase.removeChannel(channel);
     };
   }, [quizId]);
-  useEffect(() => {
+ useEffect(() => {
   if (!quizId) return;
 
   const channel = supabase
@@ -147,6 +153,7 @@ useEffect(() => {
 
   return () => supabase.removeChannel(channel);
 }, [quizId]);
+
 
 
   // --------------------------------------------------
