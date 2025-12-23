@@ -807,21 +807,59 @@ navigate(`/lobby/${quizId}`);
 };
 
 
-    const handleReuseQuiz = (quizToReuse: Quiz) => {
-        if (agendaInfo.agendaName) {
-            const prefix = `${agendaInfo.agendaName} - `;
-            if (quizToReuse.title.startsWith(prefix)) {
-                const dynamicPart = quizToReuse.title.substring(prefix.length);
-                setDynamicTitle(dynamicPart);
-            } else {
-                setDynamicTitle(quizToReuse.title);
-            }
-        } else {
-            setTitle(quizToReuse.title);
-        }
-        setQuestions(quizToReuse.questions);
-        setView('library'); // Stays in the library view to allow adding more questions
-    };
+    const handleReuseQuiz = async (quizToReuse: Quiz) => {
+  try {
+    // 1️⃣ Fetch questions for this quiz
+    const { data, error } = await supabase
+      .from('quiz_questions')
+      .select('*')
+      .eq('quiz_id', quizToReuse.id)
+      .order('question_order');
+
+    if (error) throw error;
+
+    // 2️⃣ Map DB → Question interface
+    const mappedQuestions: Question[] = data.map((row: any) => ({
+      id: row.pk_id.toString(),
+      text: row.question_text,
+      timeLimit: row.time_limit,
+      technology: row.technology,
+      skill: row.skill,
+      type: row.type,
+      options: [
+        row.option_1,
+        row.option_2,
+        row.option_3,
+        row.option_4,
+      ].filter(Boolean),
+      correctAnswerIndex: row.correct_answer_index,
+    }));
+
+    // 3️⃣ Handle title (agenda-safe)
+    if (agendaInfo.agendaName) {
+      const prefix = `${agendaInfo.agendaName} - `;
+      if (quizToReuse.title.startsWith(prefix)) {
+        setDynamicTitle(quizToReuse.title.substring(prefix.length));
+      } else {
+        setDynamicTitle(quizToReuse.title);
+      }
+    } else {
+      setTitle(quizToReuse.title);
+    }
+
+    // 4️⃣ 🔥 ADD QUESTIONS TO "Your Questions"
+    setQuestions(mappedQuestions);
+
+    // 5️⃣ Stay on Create Quiz screen
+    setView('past'); // optional: change to 'past' if you want
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  } catch (err) {
+    console.error('Reuse failed:', err);
+    alert('Failed to reuse quiz');
+  }
+};
+
 
     // const handleArchiveQuiz = async (quizId: string) => {
     //     if (window.confirm('Are you sure you want to archive this quiz? It will be hidden from this list but its data will be preserved for analytics.')) {
