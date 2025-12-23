@@ -283,8 +283,7 @@ const handleSelect = async (index: number) => {
   });
 
   // 2️⃣ Update total player score
- // 1️⃣ Get current score
-const { data: currentPlayer } = await supabase
+ const { data: currentPlayer } = await supabase
   .from('quiz_players')
   .select('score')
   .eq('quiz_id', quizId)
@@ -299,7 +298,7 @@ await supabase
   })
   .eq('quiz_id', quizId)
   .eq('player_id', playerId);
-
+};
 
     return (
       <div className="p-6 max-w-3xl mx-auto text-center">
