@@ -283,12 +283,23 @@ const handleSelect = async (index: number) => {
   });
 
   // 2️⃣ Update total player score
-  await supabase
-    .from('quiz_players')
-    .update({ score: supabase.rpc('coalesce_score', { val: score }) })
-    .eq('quiz_id', quizId)
-    .eq('player_id', playerId);
-};
+ // 1️⃣ Get current score
+const { data: currentPlayer } = await supabase
+  .from('quiz_players')
+  .select('score')
+  .eq('quiz_id', quizId)
+  .eq('player_id', playerId)
+  .single();
+
+// 2️⃣ Update score properly
+await supabase
+  .from('quiz_players')
+  .update({
+    score: (currentPlayer?.score ?? 0) + score,
+  })
+  .eq('quiz_id', quizId)
+  .eq('player_id', playerId);
+
 
     return (
       <div className="p-6 max-w-3xl mx-auto text-center">
