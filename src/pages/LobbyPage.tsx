@@ -135,7 +135,10 @@ const LobbyPage = () => {
 
     const { error } = await supabase
       .from('quiz_master_structure')
-      .update({ game_state: nextState })
+      .update({
+    game_state: 'QUESTION_ACTIVE',
+    show_question_to_players: true,
+  })
       .eq('quiz_id', quizId);
 
     if (!error) {

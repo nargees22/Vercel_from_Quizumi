@@ -731,10 +731,10 @@ setIsCustomQuestionValid(false);
     quiz_id: quizId,
     title: finalTitle,
     organizer_name: organizerName!,
-    //game_state: GameState.LOBBY,
-    game_state: GameState.QUESTION_ACTIVE,
+    game_state: GameState.LOBBY,
+    //game_state: GameState.QUESTION_ACTIVE,
   current_question_index: 0,
-  show_question_to_players: true,
+  show_question_to_players: false,
     is_draft: false,
 
     show_live_response_count: quizConfig.showLiveResponseCount,
@@ -744,7 +744,7 @@ setIsCustomQuestionValid(false);
     defender_name: quizConfig.clanNames?.[Clan.DEFENDERS] ?? null,
     clan_assignment: quizConfig.clanAssignment,
 
-    current_question_index: 0,
+  
   };
 
   // 1️⃣ Insert quiz into quiz_master_structure
