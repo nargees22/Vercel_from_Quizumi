@@ -162,10 +162,10 @@ const QuizHostPage = () => {
         },
         (payload) => {
           const newAnswer = payload.new;
+          console.log('Real-time event received:', payload); // Debug log
           if (newAnswer && newAnswer.question_id) {
             setAnswers((prev) => {
               const updatedAnswers = [...prev, newAnswer];
-              console.log('New answer received:', newAnswer); // Debug log
               console.log('Updated answers state:', updatedAnswers); // Debug log
               return updatedAnswers;
             });
@@ -268,7 +268,30 @@ useEffect(() => {
       ? quiz.currentIndex === quiz.questions.length - 1
       : false;
 
+  useEffect(() => {
+    console.log('Answers state updated:', answers); // Debug log
+    console.log('Question state updated:', question); // Debug log
+  }, [answers, question]);
+
   /* ---------------------------- GAME STATE UPDATE ---------------------------- */
+
+  const fetchLatestAnswers = async () => {
+    if (!quizId || !question) return;
+
+    const { data: latestAnswers, error } = await supabase
+      .from('quiz_answers')
+      .select('*')
+      .eq('quiz_id', quizId)
+      .eq('question_id', question.id);
+
+    if (error) {
+      console.error('Error fetching latest answers:', error);
+      return;
+    }
+
+    console.log('Fetched latest answers:', latestAnswers); // Debug log
+    setAnswers(latestAnswers || []);
+  };
 
   const updateGameState = async (next: GameState) => {
     if (!quizId || !quiz) return;
@@ -280,6 +303,10 @@ useEffect(() => {
       quiz.gameState === GameState.LEADERBOARD
     ) {
       nextIndex += 1;
+    }
+
+    if (next === GameState.QUESTION_RESULT) {
+      await fetchLatestAnswers(); // Fetch latest answers when showing results
     }
 
     setQuiz((prev: any) => ({
