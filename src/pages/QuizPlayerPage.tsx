@@ -371,12 +371,7 @@ const joinQuiz = async () => {
         <h1 className="text-3xl font-bold mb-6 text-center">
           🏆 Leaderboard
         </h1>
-       <TimerCircle
-  duration={30}
-  quizId={quizId}
-  questionIndex={quiz.currentIndex}
-  onComplete={() => {}}
-/>
+ 
 
         {players.length === 0 && (
           <p className="text-center text-slate-500">
