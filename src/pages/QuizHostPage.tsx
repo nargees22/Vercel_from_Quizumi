@@ -31,6 +31,9 @@ const QuizHostPage = () => {
   // Log the quizId to debug its value
   console.log('Current quizId:', quizId);
 
+  // Simple log to verify logging functionality
+  console.log('QuizHostPage rendered');
+
   const [quiz, setQuiz] = useState<any>(null);
   const [players, setPlayers] = useState<QuizPlayer[]>([]);
   const [answers, setAnswers] = useState<any[]>([]);
