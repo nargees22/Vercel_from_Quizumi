@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../service/supabase';
 import { PageLoader } from '../components/PageLoader';
+import TimerCircle from '../components/TimerCircle';
 import { IntermediateLeaderboard } from '../components/IntermediateLeaderboard';
 import Button from '../components/Button';
 import { GameState, QuestionType } from '../../types';
@@ -32,44 +33,6 @@ const QuizHostPage = () => {
   const [answers, setAnswers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  /* ---------------------- LEADERBOARD (DB SOURCE) ---------------------- */
-
-  const fetchLeaderboard = useCallback(async () => {
-    if (!quizId) return;
-
-    const { data, error } = await supabase
-      .from('quiz_players')
-      .select('*')
-      .eq('quiz_id', quizId)
-      .order('score', { ascending: false });
-
-    if (!error && data) {
-      setPlayers(data);
-    }
-  }, [quizId]);
-
-  useEffect(() => {
-    if (!quizId) return;
-
-    const channel = supabase
-      .channel(`leaderboard-${quizId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'quiz_players',
-          filter: `quiz_id=eq.${quizId}`,
-        },
-        () => {
-          fetchLeaderboard();
-        }
-      )
-      .subscribe();
-
-    return () => supabase.removeChannel(channel);
-  }, [quizId, fetchLeaderboard]);
-
   /* ---------------------------- LOAD QUIZ DATA ---------------------------- */
 
   const loadQuiz = async () => {
@@ -77,7 +40,7 @@ const QuizHostPage = () => {
 
     setLoading(true);
 
-    const [{ data: quizRow }, { data: questionRows }] =
+    const [{ data: quizRow }, { data: questionRows }, { data: playerRows }] =
       await Promise.all([
         supabase
           .from('quiz_master_structure')
@@ -90,6 +53,12 @@ const QuizHostPage = () => {
           .select('*')
           .eq('quiz_id', quizId)
           .order('question_order'),
+
+        supabase
+          .from('quiz_players')
+          .select('*')
+          .eq('quiz_id', quizId)
+          .order('score', { ascending: false }),
       ]);
 
     if (!quizRow || !questionRows) {
@@ -103,6 +72,13 @@ const QuizHostPage = () => {
       gameState: quizRow.game_state,
       currentIndex: quizRow.current_question_index ?? 0,
       showQuestionToPlayers: quizRow.show_question_to_players,
+      config: {
+    clanBased: quizRow.clan_based ?? false,
+    titanName: quizRow.titan_name ?? null,
+    defenderName: quizRow.defender_name ?? null,
+    clanAssignment: quizRow.clan_assignment ?? null,
+  },
+
       questions: questionRows.map((q: any) => ({
         id: q.pk_id,
         text: q.question_text,
@@ -118,18 +94,16 @@ const QuizHostPage = () => {
       })),
     });
 
+    setPlayers(playerRows ?? []);
     setLoading(false);
   };
-
-  useEffect(() => {
-    loadQuiz();
-    fetchLeaderboard();
-  }, [quizId, fetchLeaderboard]);
 
   /* ------------------------ REALTIME: QUIZ STATE ------------------------ */
 
   useEffect(() => {
     if (!quizId) return;
+
+    loadQuiz(); // initial load only
 
     const channel = supabase
       .channel(`host-${quizId}`)
@@ -144,21 +118,25 @@ const QuizHostPage = () => {
         payload => {
           const row = payload.new as QuizMasterRow;
 
-          setQuiz((prev: any) => {
-            if (!prev) return prev;
+          setQuiz(prev => {
+            if (!prev || !row) return prev;
+
             return {
               ...prev,
               gameState: row.game_state,
               currentIndex:
                 row.current_question_index ?? prev.currentIndex,
-              showQuestionToPlayers: row.show_question_to_players,
+              showQuestionToPlayers:
+                row.show_question_to_players,
             };
           });
         }
       )
       .subscribe();
 
-    return () => supabase.removeChannel(channel);
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [quizId]);
 
   /* ---------------------- REALTIME: PLAYER ANSWERS ---------------------- */
@@ -185,9 +163,55 @@ const QuizHostPage = () => {
     return () => supabase.removeChannel(channel);
   }, [quizId]);
 
+  /* ---------------------- REALTIME: PLAYER SCORES ---------------------- */
+
   useEffect(() => {
-    setAnswers([]);
-  }, [quiz?.currentIndex]);
+    if (!quizId) return;
+
+    const channel = supabase
+      .channel(`players-${quizId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'quiz_players',
+          filter: `quiz_id=eq.${quizId}`,
+        },
+        payload => {
+          const newPlayer = payload.new as QuizPlayer;
+
+          setPlayers(prev => {
+            const updated = [...prev];
+            const idx = updated.findIndex(
+              p => p.player_id === newPlayer.player_id
+            );
+
+            if (idx >= 0) updated[idx] = newPlayer;
+            else updated.push(newPlayer);
+
+            return updated.sort((a, b) => b.score - a.score);
+          });
+        }
+      )
+      .subscribe();
+
+    return () => supabase.removeChannel(channel);
+  }, [quizId]);
+/* ---------------------- FETCH LEADERBOARD ON HOST ---------------------- */
+
+useEffect(() => {
+  if (quiz?.gameState === GameState.LEADERBOARD && quizId) {
+    supabase
+      .from('quiz_players')
+      .select('*')
+      .eq('quiz_id', quizId)
+      .order('score', { ascending: false })
+      .then(({ data }) => {
+        if (data) setPlayers(data);
+      });
+  }
+}, [quiz?.gameState, quizId]);
 
   /* --------------------------- DERIVED VALUES --------------------------- */
 
@@ -232,6 +256,12 @@ const QuizHostPage = () => {
       nextIndex += 1;
     }
 
+    setQuiz((prev: any) => ({
+      ...prev,
+      gameState: next,
+      currentIndex: nextIndex,
+    }));
+
     await supabase
       .from('quiz_master_structure')
       .update({
@@ -254,9 +284,34 @@ const QuizHostPage = () => {
     <div className="p-6 flex flex-col items-center">
       <h1 className="text-3xl font-bold mb-6">{quiz.title}</h1>
 
+      {quiz.gameState === GameState.QUESTION_ACTIVE && question && (
+        <div className="w-full max-w-3xl mb-8">
+          <h2 className="text-xl font-bold mb-4 text-center">
+            {question.text}
+          </h2>
+
+          <div className="grid grid-cols-2 gap-4">
+            {question.options.map((opt: string, i: number) => (
+              <div key={i} className="p-4 bg-slate-200 rounded text-center">
+                {opt}
+              </div>
+            ))}
+          </div>
+
+         <div className="flex justify-center mb-6">
+      <TimerCircle
+        duration={question.time_limit ?? 30}
+        quizId={quizId}
+        questionIndex={quiz.current_question_index}
+        onComplete={() => {}} // ❌ Player should NOT auto-change state
+      />
+    </div>
+        </div>
+      )}
+
       {quiz.gameState === GameState.QUESTION_RESULT && question && (
         <div className="w-full max-w-3xl mb-8">
-          {question.options.map((opt: string, i: number) => (
+          {question.options.map((opt, i) => (
             <div key={i} className="p-3 bg-slate-200 mb-2 rounded">
               {opt} — {answerCounts[i]} responses
             </div>
@@ -269,23 +324,34 @@ const QuizHostPage = () => {
       )}
 
       <div className="mt-8 flex gap-4">
-        {quiz.gameState === GameState.QUESTION_ACTIVE && (
-          <Button onClick={() => updateGameState(GameState.QUESTION_RESULT)}>
-            Show Results
-          </Button>
-        )}
+      {quiz.gameState === GameState.QUESTION_ACTIVE && (
+  <Button
+    onClick={() => updateGameState(GameState.QUESTION_RESULT)}
+    className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-bold"
+  >
+    Show Results
+  </Button>
+)}
+       {quiz.gameState === GameState.QUESTION_RESULT && (
+  <Button
+    onClick={() => updateGameState(GameState.LEADERBOARD)}
+    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-bold"
+  >
+    {isLastQuestion ? 'Final Leaderboard' : 'Show Leaderboard'}
+  </Button>
+)}
 
-        {quiz.gameState === GameState.QUESTION_RESULT && (
-          <Button onClick={() => updateGameState(GameState.LEADERBOARD)}>
-            {isLastQuestion ? 'Final Leaderboard' : 'Show Leaderboard'}
-          </Button>
-        )}
 
         {quiz.gameState === GameState.LEADERBOARD && !isLastQuestion && (
-          <Button onClick={() => updateGameState(GameState.QUESTION_ACTIVE)}>
-            Next Question
-          </Button>
-        )}
+  <Button
+    onClick={() => updateGameState(GameState.QUESTION_ACTIVE)}
+    className="bg-gl-orange-600 hover:bg-gl-orange-700 text-white px-6 py-3 rounded-lg font-bold"
+  >
+    Next Question
+  </Button>
+)}
+
+        
       </div>
     </div>
   );
