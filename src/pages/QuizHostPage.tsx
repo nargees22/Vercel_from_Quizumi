@@ -193,7 +193,8 @@ const QuizHostPage = () => {
       nextIndex += 1;
     }
 
-    await supabase
+    // Update game state in the database
+    const { error } = await supabase
       .from('quiz_master_structure')
       .update({
         game_state: next,
@@ -201,6 +202,32 @@ const QuizHostPage = () => {
         show_question_to_players: next === GameState.QUESTION_ACTIVE,
       })
       .eq('quiz_id', quizId);
+
+    if (error) {
+      console.error('Failed to update game state:', error);
+      return;
+    }
+
+    // Force state update for immediate UI refresh
+    if (next === GameState.QUESTION_RESULT) {
+      const { data: updatedAnswers, error: answersError } = await supabase
+        .from('quiz_answers')
+        .select('*')
+        .eq('quiz_id', quizId);
+
+      if (answersError) {
+        console.error('Failed to fetch updated answers:', answersError);
+      } else {
+        setAnswers(updatedAnswers ?? []);
+      }
+    }
+
+    setQuiz((prev: any) => ({
+      ...prev,
+      gameState: next,
+      currentIndex: nextIndex,
+      showQuestionToPlayers: next === GameState.QUESTION_ACTIVE,
+    }));
   };
 
   /* ------------------------------- GUARDS ------------------------------- */
