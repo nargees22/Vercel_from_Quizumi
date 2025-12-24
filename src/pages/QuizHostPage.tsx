@@ -156,6 +156,11 @@ const QuizHostPage = () => {
     }
   }, [quiz?.gameState, quizId]);
 
+  // Debugging: Log the players state to verify data
+  useEffect(() => {
+    console.log('Players state:', players);
+  }, [players]);
+
   /* --------------------------- DERIVED VALUES --------------------------- */
 
   const question =

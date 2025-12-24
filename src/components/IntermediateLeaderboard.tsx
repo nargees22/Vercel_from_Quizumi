@@ -29,6 +29,11 @@ export const IntermediateLeaderboard: React.FC<{
     const [isAnimating, setIsAnimating] = useState(false);
     const playerClan = useMemo(() => players.find(p => p.id === highlightPlayerId)?.clan, [players, highlightPlayerId]);
 
+    // Debugging: Log the players prop to verify data
+    useEffect(() => {
+        console.log('IntermediateLeaderboard players prop:', players);
+    }, [players]);
+
     // Add a fallback for quiz.config to prevent runtime errors
     useEffect(() => {
         if (!quiz || players.length === 0) return;
