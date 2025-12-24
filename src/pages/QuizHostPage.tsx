@@ -191,6 +191,20 @@ const QuizHostPage = () => {
 
     return () => supabase.removeChannel(channel);
   }, [quizId]);
+/* ---------------------- FETCH LEADERBOARD ON HOST ---------------------- */
+
+useEffect(() => {
+  if (quiz?.gameState === GameState.LEADERBOARD && quizId) {
+    supabase
+      .from('quiz_players')
+      .select('*')
+      .eq('quiz_id', quizId)
+      .order('score', { ascending: false })
+      .then(({ data }) => {
+        if (data) setPlayers(data);
+      });
+  }
+}, [quiz?.gameState, quizId]);
 
   /* --------------------------- DERIVED VALUES --------------------------- */
 
@@ -281,8 +295,8 @@ const QuizHostPage = () => {
             duration={question.timeLimit}
             quizId={quizId}
             questionIndex={quiz.currentIndex}
-            onComplete={() =>
-              updateGameState(GameState.QUESTION_RESULT)
+            onComplete={() =>{}
+              
             }
           />
         </div>
@@ -303,23 +317,34 @@ const QuizHostPage = () => {
       )}
 
       <div className="mt-8 flex gap-4">
-        {quiz.gameState === GameState.QUESTION_ACTIVE && (
-          <Button onClick={() => updateGameState(GameState.QUESTION_RESULT)}>
-            Show Results
-          </Button>
-        )}
+      {quiz.gameState === GameState.QUESTION_ACTIVE && (
+  <Button
+    onClick={() => updateGameState(GameState.QUESTION_RESULT)}
+    className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-bold"
+  >
+    Show Results
+  </Button>
+)}
+       {quiz.gameState === GameState.QUESTION_RESULT && (
+  <Button
+    onClick={() => updateGameState(GameState.LEADERBOARD)}
+    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-bold"
+  >
+    {isLastQuestion ? 'Final Leaderboard' : 'Show Leaderboard'}
+  </Button>
+)}
 
-        {quiz.gameState === GameState.QUESTION_RESULT && (
-          <Button onClick={() => updateGameState(GameState.LEADERBOARD)}>
-            {isLastQuestion ? 'Final Leaderboard' : 'Show Leaderboard'}
-          </Button>
-        )}
 
         {quiz.gameState === GameState.LEADERBOARD && !isLastQuestion && (
-          <Button onClick={() => updateGameState(GameState.QUESTION_ACTIVE)}>
-            Next Question
-          </Button>
-        )}
+  <Button
+    onClick={() => updateGameState(GameState.QUESTION_ACTIVE)}
+    className="bg-gl-orange-600 hover:bg-gl-orange-700 text-white px-6 py-3 rounded-lg font-bold"
+  >
+    Next Question
+  </Button>
+)}
+
+        
       </div>
     </div>
   );
