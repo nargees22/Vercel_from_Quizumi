@@ -306,12 +306,12 @@ useEffect(() => {
             ))}
           </div>
 
-         {/* <TimerCircle
+         <TimerCircle
   duration={question.timeLimit}
   quizId={quizId}
   questionIndex={quiz.currentIndex}
   onComplete={() => {}} // ❌ HOST should not auto-change state
-/> */}
+/> 
 
         </div>
       )}
