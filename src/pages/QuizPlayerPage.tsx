@@ -16,10 +16,17 @@ interface QuestionRow {
   correct_answer_index?: number;
 }
 
+interface Quiz {
+  quiz_id: string;
+  game_state: GameState;
+  current_question_index: number | null;
+  show_question_to_players: boolean;
+}
+
 const QuizPlayerPage = () => {
   const { quizId } = useParams<{ quizId: string }>();
 
-  const [quiz, setQuiz] = useState<any>(null);
+  const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [questions, setQuestions] = useState<QuestionRow[]>([]);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [answerResult, setAnswerResult] = useState<'correct' | 'wrong' | null>(null);
@@ -126,22 +133,24 @@ const joinQuiz = async () => {
           filter: `quiz_id=eq.${quizId}`,
         },
         async (payload) => {
-          const updatedQuiz = payload.new;
+          const updatedQuiz = payload.new as Quiz; // Explicitly cast to Quiz type
           if (updatedQuiz) {
             setQuiz((prevQuiz) => ({
               ...prevQuiz,
               ...updatedQuiz,
             }));
 
-            // Fetch updated questions if necessary
-            const { data: updatedQuestions } = await supabase
-              .from('quiz_questions')
-              .select('*')
-              .eq('quiz_id', quizId)
-              .order('question_order');
+            // Ensure game state transitions are handled
+            if (updatedQuiz.game_state === GameState.QUESTION_ACTIVE) {
+              const { data: updatedQuestions } = await supabase
+                .from('quiz_questions')
+                .select('*')
+                .eq('quiz_id', quizId)
+                .order('question_order');
 
-            if (updatedQuestions) {
-              setQuestions(updatedQuestions);
+              if (updatedQuestions) {
+                setQuestions(updatedQuestions);
+              }
             }
           }
         }
