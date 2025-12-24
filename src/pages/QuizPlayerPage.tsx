@@ -296,8 +296,8 @@ const joinQuiz = async () => {
       await supabase.from('quiz_answers').insert({
         quiz_id: quizId,
         player_id: playerId,
-        question_id: String(question.pk_id),
-        answer: { index },
+       question_id: question.pk_id, // ✅ NUMBER
+  answer: index,      
         time_taken: timeTaken,
         score,
       });
