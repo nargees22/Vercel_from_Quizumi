@@ -169,39 +169,63 @@ const QuizHostPage = () => {
 
   /* ---------------------- REALTIME: PLAYER SCORES ---------------------- */
 
-  useEffect(() => {
-    if (!quizId) return;
+  // useEffect(() => {
+  //   if (!quizId) return;
 
-    const channel = supabase
-      .channel(`players-${quizId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'quiz_players',
-          filter: `quiz_id=eq.${quizId}`,
-        },
-        payload => {
-          const newPlayer = payload.new as QuizPlayer;
+  //   const channel = supabase
+  //     .channel(`players-${quizId}`)
+  //     .on(
+  //       'postgres_changes',
+  //       {
+  //         event: '*',
+  //         schema: 'public',
+  //         table: 'quiz_players',
+  //         filter: `quiz_id=eq.${quizId}`,
+  //       },
+  //       payload => {
+  //         const newPlayer = payload.new as QuizPlayer;
 
-          setPlayers(prev => {
-            const updated = [...prev];
-            const idx = updated.findIndex(
-              p => p.player_id === newPlayer.player_id
-            );
+  //         setPlayers(prev => {
+  //           const updated = [...prev];
+  //           const idx = updated.findIndex(
+  //             p => p.player_id === newPlayer.player_id
+  //           );
 
-            if (idx >= 0) updated[idx] = newPlayer;
-            else updated.push(newPlayer);
+  //           if (idx >= 0) updated[idx] = newPlayer;
+  //           else updated.push(newPlayer);
 
-            return updated.sort((a, b) => b.score - a.score);
-          });
+  //           return updated.sort((a, b) => b.score - a.score);
+  //         });
+  //       }
+  //     )
+  //     .subscribe();
+
+  //   return () => supabase.removeChannel(channel);
+  // }, [quizId]);
+  /* ---------------------- FETCH LEADERBOARD ON HOST ---------------------- */
+
+useEffect(() => {
+  if (!quizId) return;
+
+  // ✅ Only fetch when host enters LEADERBOARD
+  if (quiz?.gameState === GameState.LEADERBOARD) {
+    supabase
+      .from('quiz_players')
+      .select('*')
+      .eq('quiz_id', quizId)
+      .order('score', { ascending: false })
+      .then(({ data, error }) => {
+        if (error) {
+          console.error('❌ Host leaderboard fetch failed:', error);
+          return;
         }
-      )
-      .subscribe();
 
-    return () => supabase.removeChannel(channel);
-  }, [quizId]);
+        console.log('✅ Host leaderboard players:', data);
+        setPlayers(data ?? []);
+      });
+  }
+}, [quiz?.gameState, quizId]);
+
 /* ---------------------- FETCH LEADERBOARD ON HOST ---------------------- */
 
 // useEffect(() => {
