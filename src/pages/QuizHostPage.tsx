@@ -145,7 +145,9 @@ const QuizHostPage = () => {
 
   /* ---------------------- FETCH LEADERBOARD ---------------------- */
 
+  // Add a log to confirm the useEffect is triggered
   useEffect(() => {
+    console.log('useEffect triggered for fetching players');
     if (quiz?.gameState === GameState.LEADERBOARD && quizId) {
       console.log('Fetching players for quizId:', quizId);
       supabase
