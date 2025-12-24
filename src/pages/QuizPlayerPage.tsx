@@ -1,10 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../service/supabase';
 import { PageLoader } from '../components/PageLoader';
 import Button from '../components/Button';
 import { GameState } from '../../types';
-import TimerCircle from '../components/TimerCircle';
 
 interface QuestionRow {
   pk_id: number;
@@ -14,6 +13,7 @@ interface QuestionRow {
   option_3?: string;
   option_4?: string;
   correct_answer_index?: number;
+  time_limit?: number;
 }
 
 const QuizPlayerPage = () => {
@@ -21,43 +21,24 @@ const QuizPlayerPage = () => {
 
   const [quiz, setQuiz] = useState<any>(null);
   const [questions, setQuestions] = useState<QuestionRow[]>([]);
+  const [players, setPlayers] = useState<any[]>([]);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [answerResult, setAnswerResult] = useState<'correct' | 'wrong' | null>(null);
   const [loading, setLoading] = useState(true);
-  const questionStartRef = React.useRef<number | null>(null);
-  const [players, setPlayers] = useState<any[]>([]);
 
-
+  const questionStartRef = useRef<number | null>(null);
 
   // --------------------------------------------------
-  // STABLE PLAYER ID (persists on refresh)
+  // STABLE PLAYER ID (REFRESH SAFE)
   // --------------------------------------------------
   const playerId = useMemo(() => {
     let id = localStorage.getItem('player_id');
     if (!id) {
-      id = crypto.randomUUID();
+      id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
       localStorage.setItem('player_id', id);
     }
     return id;
   }, []);
-  const fetchPlayers = async () => {
-    if (!quizId) return;
-
-    const { data, error } = await supabase
-      .from('quiz_players')
-      .select('*')
-      .eq('quiz_id', quizId)
-      .order('score', { ascending: false });
-
-    if (!error && data) {
-      setPlayers(data);
-    }
-  };
-  useEffect(() => {
-    if (quiz?.game_state === GameState.LEADERBOARD) {
-      fetchPlayers();
-    }
-  }, [quiz?.game_state]);
 
   // --------------------------------------------------
   // FETCH QUIZ + QUESTIONS
@@ -81,101 +62,87 @@ const QuizPlayerPage = () => {
         .order('question_order'),
     ]);
 
-    if (quizData) {
-      setQuiz(quizData);
-
-      // ✅ REGISTER PLAYER (UPSERT SAFE)
-
-    }
-
+    if (quizData) setQuiz(quizData);
     if (questionData) setQuestions(questionData);
 
     setLoading(false);
   };
+
   useEffect(() => {
     fetchData();
   }, [quizId]);
 
-  await supabase
-    .from('quiz_players')
-    .upsert(
-      {
-        quiz_id: quizId,
-        player_id: playerId,
-        player_name: `Player-${playerId.slice(0, 4)}`,
-        score: 0,
-      },
-      { onConflict: 'quiz_id,player_id' }
-    );
-
   // --------------------------------------------------
-  // REALTIME LISTENER (HOST → PLAYER SYNC)
+  // REALTIME QUIZ STATE SYNC
   // --------------------------------------------------
-  // useEffect(() => {
-  //   fetchData();
-
-  //   const channel = supabase
-  //     .channel(`player-${quizId}`)
-  //     .on(
-  //       'postgres_changes',
-  //       {
-  //         event: '*',
-  //         schema: 'public',
-  //         table: 'quiz_master_structure',
-  //         filter: `quiz_id=eq.${quizId}`,
-  //       },
-  //       () => fetchData()
-  //     )
-  //     .subscribe();
-
-  //   return () => {
-  //     supabase.removeChannel(channel);
-  //   };
-  // }, [quizId]);
   useEffect(() => {
     if (!quizId) return;
-
-    // Initial fetch is handled by your other useEffect, 
-    // but we define the refresh logic here
-    const handleChanges = (payload: any) => {
-      console.log('Change received!', payload);
-      // Instead of setting state with payload.new, fetch the fresh data
-      fetchData();
-    };
 
     const channel = supabase
       .channel(`player-quiz-${quizId}`)
       .on(
         'postgres_changes',
         {
-          event: '*', // Listen for all updates/deletes/inserts
+          event: '*',
           schema: 'public',
           table: 'quiz_master_structure',
           filter: `quiz_id=eq.${quizId}`,
         },
-        handleChanges
+        () => fetchData()
       )
-      .subscribe((status) => {
-        console.log("Subscription status:", status);
-      });
+      .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
   }, [quizId]);
 
-
   // --------------------------------------------------
-  // RESET UI ON QUESTION CHANGE
+  // RESET WHEN QUESTION CHANGES
   // --------------------------------------------------
   useEffect(() => {
     setSelectedAnswer(null);
     setAnswerResult(null);
-
-    // ⏱ start timing for this question
     questionStartRef.current = Date.now();
   }, [quiz?.current_question_index]);
 
+  // --------------------------------------------------
+  // JOIN QUIZ (UPSERT SAFE)
+  // --------------------------------------------------
+  const joinQuiz = async () => {
+    await supabase
+      .from('quiz_players')
+      .upsert(
+        {
+          quiz_id: quizId,
+          player_id: playerId,
+          player_name: `Player-${playerId.slice(0, 4)}`,
+          score: 0,
+        },
+        { onConflict: 'quiz_id,player_id' }
+      );
+  };
+
+  // --------------------------------------------------
+  // FETCH LEADERBOARD
+  // --------------------------------------------------
+  const fetchPlayers = async () => {
+    if (!quizId) return;
+
+    const { data } = await supabase
+      .from('quiz_players')
+      .select('*')
+      .eq('quiz_id', quizId)
+      .order('score', { ascending: false });
+
+    if (data) setPlayers(data);
+  };
+
+  useEffect(() => {
+    if (quiz?.game_state === GameState.LEADERBOARD) {
+      fetchPlayers();
+    }
+  }, [quiz?.game_state]);
 
   // --------------------------------------------------
   // GUARDS
@@ -186,17 +153,14 @@ const QuizPlayerPage = () => {
 
   const question =
     typeof quiz.current_question_index === 'number' &&
-      quiz.current_question_index >= 0 &&
-      quiz.current_question_index < questions.length
+    quiz.current_question_index >= 0 &&
+    quiz.current_question_index < questions.length
       ? questions[quiz.current_question_index]
       : null;
 
   // --------------------------------------------------
   // LOBBY
   // --------------------------------------------------
-  // if (quiz.game_state === GameState.LOBBY) {
-  //   return <PageLoader message="Waiting for host to start the quiz..." />;
-  // }
   if (quiz.game_state === GameState.LOBBY) {
     return (
       <div className="flex flex-col items-center mt-20 gap-6">
@@ -214,7 +178,6 @@ const QuizPlayerPage = () => {
     );
   }
 
-
   // --------------------------------------------------
   // QUESTION VIEW
   // --------------------------------------------------
@@ -230,94 +193,42 @@ const QuizPlayerPage = () => {
       question.option_4,
     ].filter(Boolean);
 
-    // ✅ FINAL ANSWER HANDLER (DB WRITE)
-    // const handleSelect = async (index: number) => {
-    //   if (selectedAnswer !== null) return;
-
-    //   setSelectedAnswer(index);
-
-    //   const isCorrect = index === question.correct_answer_index;
-    //   setAnswerResult(isCorrect ? 'correct' : 'wrong');
-
-    //   // Debugging: Log the payload being sent to the database
-    //   console.log('Submitting answer:', {
-    //     quiz_id: quizId,
-    //     question_id: question.pk_id,
-    //     player_id: 'player_unique_id', // Replace with actual player ID
-    //     answer: index,
-    //     is_correct: isCorrect,
-    //   });
-
-    //   // Send the answer to the database
-    //   try {
-    //     await supabase
-    //       .from('quiz_answers')
-    //       .insert({
-    //         quiz_id: quizId,
-    //         question_id: question.pk_id,
-    //         player_id: 'player_unique_id', // Replace with actual player ID
-    //         answer: index,
-    //         is_correct: isCorrect,
-    //       });
-    //   } catch (error) {
-    //     console.error('Failed to submit answer:', error);
-    //   }
-    // };
-    // const handleSelect = async (index: number) => {
-    //   if (selectedAnswer !== null) return;
-
-    //   setSelectedAnswer(index);
-
-    //   setAnswerResult(
-    //     index === question.correct_answer_index ? 'correct' : 'wrong'
-    //   );
-
-    //   await supabase.from('quiz_answers').insert({
-    //     quiz_id: quiz.quiz_id,
-    //     player_id: quiz.player_id ?? 'anonymous',
-    //     question_id: String(question.pk_id), // ✅ STRING
-    //     answer: { index },                   // ✅ JSONB
-    //     score: index === question.correct_answer_index ? 1 : 0,
-    //   });
-    // };
     const handleSelect = async (index: number) => {
-  if (selectedAnswer !== null || !questionStartRef.current) return;
+      if (selectedAnswer !== null || !questionStartRef.current) return;
 
-  setSelectedAnswer(index);
+      setSelectedAnswer(index);
 
-  const timeTaken =
-    (Date.now() - questionStartRef.current) / 1000;
+      const timeTaken =
+        (Date.now() - questionStartRef.current) / 1000;
 
-  const isCorrect = index === question.correct_answer_index;
+      const isCorrect = index === question.correct_answer_index;
+      const timeLimit = question.time_limit ?? 30;
 
-  // 🎯 SCORE CALCULATION
-  let score = 0;
-  if (isCorrect) {
-    const timeLimit = 30; // or question.time_limit ?? 30
-    const speedFactor = Math.max(0, 1 - timeTaken / timeLimit);
-    score = Math.round(1000 + speedFactor * 1000);
-  }
+      let score = 0;
+      if (isCorrect) {
+        const speedFactor = Math.max(0, 1 - timeTaken / timeLimit);
+        score = Math.round(1000 + speedFactor * 1000);
+      }
 
-  setAnswerResult(isCorrect ? 'correct' : 'wrong');
+      setAnswerResult(isCorrect ? 'correct' : 'wrong');
 
-  // 1️⃣ SAVE ANSWER
-  await supabase.from('quiz_answers').insert({
-    quiz_id: quizId,
-    player_id: playerId,
-    question_id: String(question.pk_id),
-    answer: { index },
-    time_taken: timeTaken,
-    score,
-  });
+      // 1️⃣ Save answer
+      await supabase.from('quiz_answers').insert({
+        quiz_id: quizId,
+        player_id: playerId,
+        question_id: String(question.pk_id),
+        answer: { index },
+        time_taken: timeTaken,
+        score,
+      });
 
-  // 2️⃣ ✅ ATOMIC SCORE UPDATE (THIS IS WHERE RPC GOES)
-  await supabase.rpc('increment_player_score', {
-    p_quiz_id: quizId,
-    p_player_id: playerId,
-    p_score: score,
-  });
-};
-
+      // 2️⃣ Atomic score update
+      await supabase.rpc('increment_player_score', {
+        p_quiz_id: quizId,
+        p_player_id: playerId,
+        p_score: score,
+      });
+    };
 
     return (
       <div className="p-6 max-w-3xl mx-auto text-center">
@@ -359,24 +270,14 @@ const QuizPlayerPage = () => {
   }
 
   // --------------------------------------------------
-  // WAITING STATE
+  // LEADERBOARD
   // --------------------------------------------------
-  // if (quiz.game_state === GameState.QUESTION_RESULT) {
-  //   return <PageLoader message="Waiting for next question..." />;
-  // }
   if (quiz.game_state === GameState.LEADERBOARD) {
     return (
       <div className="max-w-xl mx-auto p-6">
         <h1 className="text-3xl font-bold mb-6 text-center">
           🏆 Leaderboard
         </h1>
-
-
-        {players.length === 0 && (
-          <p className="text-center text-slate-500">
-            No scores yet
-          </p>
-        )}
 
         {players.map((player, index) => (
           <div
