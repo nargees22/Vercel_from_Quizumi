@@ -1,3 +1,4 @@
+
 import React from 'react';
 // Fix: Ensure standard react-router-dom exports are correctly referenced
 import { Routes, Route, Navigate } from 'react-router-dom';
@@ -24,7 +25,7 @@ const App = () => {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/create" element={<CreateQuizPage />} />
-            <Route path="/join" element={<Navigate to="/" replace />} />
+            <Route path="/join" element={<JoinQuizPage />} />
             <Route path="/join/:quizId" element={<JoinQuizPage />} />
             <Route path="/lobby/:quizId" element={<LobbyPage />} />
             <Route path="/player-lobby/:quizId" element={<PlayerLobby />} />

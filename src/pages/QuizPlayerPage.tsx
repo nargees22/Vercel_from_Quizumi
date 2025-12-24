@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../service/supabase';
 import { PageLoader } from '../components/PageLoader';
@@ -13,7 +13,6 @@ interface QuestionRow {
   option_3?: string;
   option_4?: string;
   correct_answer_index?: number;
-  time_limit?: number;
 }
 
 const QuizPlayerPage = () => {
@@ -21,20 +20,17 @@ const QuizPlayerPage = () => {
 
   const [quiz, setQuiz] = useState<any>(null);
   const [questions, setQuestions] = useState<QuestionRow[]>([]);
-  const [players, setPlayers] = useState<any[]>([]);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [answerResult, setAnswerResult] = useState<'correct' | 'wrong' | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const questionStartRef = useRef<number | null>(null);
-
   // --------------------------------------------------
-  // STABLE PLAYER ID (REFRESH SAFE)
+  // STABLE PLAYER ID (persists on refresh)
   // --------------------------------------------------
   const playerId = useMemo(() => {
     let id = localStorage.getItem('player_id');
     if (!id) {
-      id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      id = crypto.randomUUID();
       localStorage.setItem('player_id', id);
     }
     return id;
@@ -62,24 +58,30 @@ const QuizPlayerPage = () => {
         .order('question_order'),
     ]);
 
-    if (quizData) setQuiz(quizData);
+    if (quizData) {
+      setQuiz(quizData);
+
+      // ✅ REGISTER PLAYER (UPSERT SAFE)
+      await supabase.from('players').upsert({
+        quiz_id: quizId,
+        player_id: playerId,
+        player_name: `Player-${playerId.slice(0, 4)}`,
+      });
+    }
+
     if (questionData) setQuestions(questionData);
 
     setLoading(false);
   };
 
+  // --------------------------------------------------
+  // REALTIME LISTENER (HOST → PLAYER SYNC)
+  // --------------------------------------------------
   useEffect(() => {
     fetchData();
-  }, [quizId]);
-
-  // --------------------------------------------------
-  // ENHANCED REALTIME QUIZ STATE SYNC
-  // --------------------------------------------------
-  useEffect(() => {
-    if (!quizId) return;
 
     const channel = supabase
-      .channel(`player-quiz-${quizId}`)
+      .channel(`player-${quizId}`)
       .on(
         'postgres_changes',
         {
@@ -88,23 +90,7 @@ const QuizPlayerPage = () => {
           table: 'quiz_master_structure',
           filter: `quiz_id=eq.${quizId}`,
         },
-        (payload) => {
-          console.log('Real-time update for quiz_master_structure:', payload);
-          fetchData();
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'quiz_players',
-          filter: `quiz_id=eq.${quizId}`,
-        },
-        (payload) => {
-          console.log('Real-time update for quiz_players:', payload);
-          fetchPlayers();
-        }
+        () => fetchData()
       )
       .subscribe();
 
@@ -114,70 +100,12 @@ const QuizPlayerPage = () => {
   }, [quizId]);
 
   // --------------------------------------------------
-  // RESET WHEN QUESTION CHANGES
+  // RESET UI ON QUESTION CHANGE
   // --------------------------------------------------
   useEffect(() => {
     setSelectedAnswer(null);
     setAnswerResult(null);
-    questionStartRef.current = Date.now();
   }, [quiz?.current_question_index]);
-
-  // --------------------------------------------------
-  // JOIN QUIZ (UPSERT SAFE)
-  // --------------------------------------------------
-  const joinQuiz = async () => {
-    await supabase
-      .from('quiz_players')
-      .upsert(
-        {
-          quiz_id: quizId,
-          player_id: playerId,
-          player_name: `Player-${playerId.slice(0, 4)}`,
-          score: 0,
-        },
-        { onConflict: 'quiz_id,player_id' }
-      );
-  };
-
-  // --------------------------------------------------
-  // FETCH LEADERBOARD
-  // --------------------------------------------------
-  const fetchPlayers = async () => {
-    if (!quizId) return;
-
-    const { data } = await supabase
-      .from('quiz_players')
-      .select('*')
-      .eq('quiz_id', quizId)
-      .order('score', { ascending: false });
-
-    if (data) setPlayers(data);
-  };
-
-  useEffect(() => {
-    if (quiz?.game_state === GameState.LEADERBOARD) {
-      fetchPlayers();
-    }
-  }, [quiz?.game_state]);
-
-  // --------------------------------------------------
-  // DEBUGGING THE INCREMENT_PLAYER_SCORE RPC
-  // --------------------------------------------------
-  const handleScoreUpdate = async (score) => {
-    const { error } = await supabase.rpc('increment_player_score', {
-      p_quiz_id: quizId,
-      p_player_id: playerId,
-      p_score: score,
-    });
-
-    if (error) {
-      console.error('Failed to update score:', error);
-    } else {
-      console.log('Score updated successfully');
-      // Fetch updated leaderboard after score update
-      await fetchPlayers();
-    }
-  };
 
   // --------------------------------------------------
   // GUARDS
@@ -197,20 +125,7 @@ const QuizPlayerPage = () => {
   // LOBBY
   // --------------------------------------------------
   if (quiz.game_state === GameState.LOBBY) {
-    return (
-      <div className="flex flex-col items-center mt-20 gap-6">
-        <h1 className="text-2xl font-bold">
-          Waiting for host to start the quiz
-        </h1>
-
-        <Button
-          onClick={joinQuiz}
-          className="bg-gl-orange-600 hover:bg-gl-orange-700"
-        >
-          Join Quiz
-        </Button>
-      </div>
-    );
+    return <PageLoader message="Waiting for host to start the quiz..." />;
   }
 
   // --------------------------------------------------
@@ -228,37 +143,23 @@ const QuizPlayerPage = () => {
       question.option_4,
     ].filter(Boolean);
 
+    // ✅ FINAL ANSWER HANDLER (DB WRITE)
     const handleSelect = async (index: number) => {
-      if (selectedAnswer !== null || !questionStartRef.current) return;
+      if (selectedAnswer !== null) return;
 
       setSelectedAnswer(index);
 
-      const timeTaken =
-        (Date.now() - questionStartRef.current) / 1000;
-
       const isCorrect = index === question.correct_answer_index;
-      const timeLimit = question.time_limit ?? 30;
-
-      let score = 0;
-      if (isCorrect) {
-        const speedFactor = Math.max(0, 1 - timeTaken / timeLimit);
-        score = Math.round(1000 + speedFactor * 1000);
-      }
-
       setAnswerResult(isCorrect ? 'correct' : 'wrong');
 
-      // 1️⃣ Save answer
-      await supabase.from('quiz_answers').insert({
+      // ✅ SAVE ANSWER
+      await supabase.from('player_answers').insert({
         quiz_id: quizId,
         player_id: playerId,
-        question_id: String(question.pk_id),
-        answer: { index },
-        time_taken: timeTaken,
-        score,
+        question_id: question.pk_id,
+        selected_answer_index: index,
+        is_correct: isCorrect,
       });
-
-      // 2️⃣ Atomic score update
-      await handleScoreUpdate(score);
     };
 
     return (
@@ -301,31 +202,10 @@ const QuizPlayerPage = () => {
   }
 
   // --------------------------------------------------
-  // LEADERBOARD
+  // WAITING STATE
   // --------------------------------------------------
-  if (quiz.game_state === GameState.LEADERBOARD) {
-    return (
-      <div className="max-w-xl mx-auto p-6">
-        <h1 className="text-3xl font-bold mb-6 text-center">
-          🏆 Leaderboard
-        </h1>
-
-        {players.map((player, index) => (
-          <div
-            key={player.player_id}
-            className="flex justify-between items-center bg-white p-4 mb-2 rounded shadow"
-          >
-            <span className="font-bold">
-              #{index + 1} {player.player_name}
-            </span>
-
-            <span className="text-gl-orange-600 font-bold">
-              {player.score} pts
-            </span>
-          </div>
-        ))}
-      </div>
-    );
+  if (quiz.game_state === GameState.QUESTION_RESULT) {
+    return <PageLoader message="Waiting for next question..." />;
   }
 
   // --------------------------------------------------
