@@ -96,18 +96,17 @@ const QuizPlayerPage = () => {
     fetchData();
   }, [quizId]);
 
-const joinQuiz = async () => {
   await supabase
     .from('quiz_players')
-    .insert({
-      quiz_id: quizId,
-      player_id: playerId,
-      player_name: `Player-${playerId.slice(0, 4)}`,
-      score: 0,
-    });
-
-  fetchPlayers(); // optional refresh
-};
+    .upsert(
+      {
+        quiz_id: quizId,
+        player_id: playerId,
+        player_name: `Player-${playerId.slice(0, 4)}`,
+        score: 0,
+      },
+      { onConflict: 'quiz_id,player_id' }
+    );
 
   // --------------------------------------------------
   // REALTIME LISTENER (HOST → PLAYER SYNC)
@@ -133,37 +132,37 @@ const joinQuiz = async () => {
   //     supabase.removeChannel(channel);
   //   };
   // }, [quizId]);
- useEffect(() => {
-  if (!quizId) return;
+  useEffect(() => {
+    if (!quizId) return;
 
-  // Initial fetch is handled by your other useEffect, 
-  // but we define the refresh logic here
-  const handleChanges = (payload: any) => {
-    console.log('Change received!', payload);
-    // Instead of setting state with payload.new, fetch the fresh data
-    fetchData(); 
-  };
+    // Initial fetch is handled by your other useEffect, 
+    // but we define the refresh logic here
+    const handleChanges = (payload: any) => {
+      console.log('Change received!', payload);
+      // Instead of setting state with payload.new, fetch the fresh data
+      fetchData();
+    };
 
-  const channel = supabase
-    .channel(`player-quiz-${quizId}`)
-    .on(
-      'postgres_changes',
-      {
-        event: '*', // Listen for all updates/deletes/inserts
-        schema: 'public',
-        table: 'quiz_master_structure',
-        filter: `quiz_id=eq.${quizId}`,
-      },
-      handleChanges
-    )
-    .subscribe((status) => {
-      console.log("Subscription status:", status);
-    });
+    const channel = supabase
+      .channel(`player-quiz-${quizId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen for all updates/deletes/inserts
+          schema: 'public',
+          table: 'quiz_master_structure',
+          filter: `quiz_id=eq.${quizId}`,
+        },
+        handleChanges
+      )
+      .subscribe((status) => {
+        console.log("Subscription status:", status);
+      });
 
-  return () => {
-    supabase.removeChannel(channel);
-  };
-}, [quizId]);
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [quizId]);
 
 
   // --------------------------------------------------
@@ -199,21 +198,21 @@ const joinQuiz = async () => {
   //   return <PageLoader message="Waiting for host to start the quiz..." />;
   // }
   if (quiz.game_state === GameState.LOBBY) {
-  return (
-    <div className="flex flex-col items-center mt-20 gap-6">
-      <h1 className="text-2xl font-bold">
-        Waiting for host to start the quiz
-      </h1>
+    return (
+      <div className="flex flex-col items-center mt-20 gap-6">
+        <h1 className="text-2xl font-bold">
+          Waiting for host to start the quiz
+        </h1>
 
-      <Button
-        onClick={joinQuiz}
-        className="bg-gl-orange-600 hover:bg-gl-orange-700"
-      >
-        Join Quiz
-      </Button>
-    </div>
-  );
-}
+        <Button
+          onClick={joinQuiz}
+          className="bg-gl-orange-600 hover:bg-gl-orange-700"
+        >
+          Join Quiz
+        </Button>
+      </div>
+    );
+  }
 
 
   // --------------------------------------------------
@@ -282,52 +281,43 @@ const joinQuiz = async () => {
     //   });
     // };
     const handleSelect = async (index: number) => {
-      if (selectedAnswer !== null || !questionStartRef.current) return;
+  if (selectedAnswer !== null || !questionStartRef.current) return;
 
-      setSelectedAnswer(index);
+  setSelectedAnswer(index);
 
-      const timeTaken =
-        (Date.now() - questionStartRef.current) / 1000;
+  const timeTaken =
+    (Date.now() - questionStartRef.current) / 1000;
 
-      const isCorrect = index === question.correct_answer_index;
+  const isCorrect = index === question.correct_answer_index;
 
-      // 🎯 TIME-BASED SCORE
-      let score = 0;
-      if (isCorrect) {
-        score = Math.round(
-          1000 + Math.max(0, (1 - timeTaken / 30)) * 1000
-        );
-      }
+  // 🎯 SCORE CALCULATION
+  let score = 0;
+  if (isCorrect) {
+    const timeLimit = 30; // or question.time_limit ?? 30
+    const speedFactor = Math.max(0, 1 - timeTaken / timeLimit);
+    score = Math.round(1000 + speedFactor * 1000);
+  }
 
-      setAnswerResult(isCorrect ? 'correct' : 'wrong');
+  setAnswerResult(isCorrect ? 'correct' : 'wrong');
 
-      // 1️⃣ Save answer
-      await supabase.from('quiz_answers').insert({
-        quiz_id: quizId,
-        player_id: playerId,
-        question_id: String(question.pk_id),
-        answer: { index },
-        time_taken: timeTaken,
-        score,
-      });
+  // 1️⃣ SAVE ANSWER
+  await supabase.from('quiz_answers').insert({
+    quiz_id: quizId,
+    player_id: playerId,
+    question_id: String(question.pk_id),
+    answer: { index },
+    time_taken: timeTaken,
+    score,
+  });
 
-      // 2️⃣ Update total player score
-      const { data: currentPlayer } = await supabase
-        .from('quiz_players')
-        .select('score')
-        .eq('quiz_id', quizId)
-        .eq('player_id', playerId)
-        .single();
+  // 2️⃣ ✅ ATOMIC SCORE UPDATE (THIS IS WHERE RPC GOES)
+  await supabase.rpc('increment_player_score', {
+    p_quiz_id: quizId,
+    p_player_id: playerId,
+    p_score: score,
+  });
+};
 
-      // 2️⃣ Update score properly
-      await supabase
-        .from('quiz_players')
-        .update({
-          score: (currentPlayer?.score ?? 0) + score,
-        })
-        .eq('quiz_id', quizId)
-        .eq('player_id', playerId);
-    };
 
     return (
       <div className="p-6 max-w-3xl mx-auto text-center">
@@ -380,7 +370,7 @@ const joinQuiz = async () => {
         <h1 className="text-3xl font-bold mb-6 text-center">
           🏆 Leaderboard
         </h1>
- 
+
 
         {players.length === 0 && (
           <p className="text-center text-slate-500">
