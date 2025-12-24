@@ -89,8 +89,21 @@ const QuizPlayerPage = () => {
           filter: `quiz_id=eq.${quizId}`,
         },
         (payload) => {
-          console.log('Real-time update received:', payload);
+          console.log('Real-time update for quiz_master_structure:', payload);
           fetchData();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'quiz_players',
+          filter: `quiz_id=eq.${quizId}`,
+        },
+        (payload) => {
+          console.log('Real-time update for quiz_players:', payload);
+          fetchPlayers();
         }
       )
       .subscribe();
