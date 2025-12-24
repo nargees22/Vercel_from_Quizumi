@@ -169,6 +169,8 @@ const QuizHostPage = () => {
               console.log('Updated answers state:', updatedAnswers); // Debug log
               return updatedAnswers;
             });
+          } else {
+            console.log('Invalid answer payload:', payload); // Debug log
           }
         }
       )
@@ -252,6 +254,8 @@ useEffect(() => {
         const idx = a.answer?.index;
         if (typeof idx === 'number' && idx >= 0 && idx < counts.length) {
           counts[idx]++;
+        } else {
+          console.log('Invalid answer index:', idx); // Debug log
         }
       });
 
