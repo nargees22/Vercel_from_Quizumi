@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../service/supabase';
 import { PageLoader } from '../components/PageLoader';
-import TimerCircle from '../components/TimerCircle';
+import TimerCircle  from '../components/TimerCircle';
 import { IntermediateLeaderboard } from '../components/IntermediateLeaderboard';
 import Button from '../components/Button';
 import { GameState, QuestionType } from '../../types';
@@ -215,8 +215,7 @@ const QuizHostPage = () => {
       <div className="mt-6 flex justify-center">
         <TimerCircle
           duration={question.timeLimit}
-          quizId={quizId}
-          questionIndex={quiz.currentIndex}
+          start
           onComplete={() => updateGameState(GameState.QUESTION_RESULT)}
         />
       </div>
@@ -325,4 +324,4 @@ const QuizHostPage = () => {
   );
 };
 
-export default QuizHostPage;
+export default QuizHostPage; 
