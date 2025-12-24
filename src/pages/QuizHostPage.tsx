@@ -147,12 +147,20 @@ const QuizHostPage = () => {
 
   useEffect(() => {
     if (quiz?.gameState === GameState.LEADERBOARD && quizId) {
+      console.log('Fetching players for quizId:', quizId);
       supabase
         .from('quiz_players')
         .select('*')
         .eq('quiz_id', quizId)
         .order('score', { ascending: false })
-        .then(({ data }) => setPlayers(data ?? []));
+        .then(({ data, error }) => {
+          if (error) {
+            console.error('Error fetching players:', error);
+          } else {
+            console.log('Fetched players:', data);
+            setPlayers(data ?? []);
+          }
+        });
     }
   }, [quiz?.gameState, quizId]);
 
