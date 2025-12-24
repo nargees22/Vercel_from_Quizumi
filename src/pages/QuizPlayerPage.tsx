@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../service/supabase';
 import { PageLoader } from '../components/PageLoader';
 import Button from '../components/Button';
@@ -25,6 +25,7 @@ interface Quiz {
 
 const QuizPlayerPage = () => {
   const { quizId } = useParams<{ quizId: string }>();
+  const navigate = useNavigate();
 
   const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [questions, setQuestions] = useState<QuestionRow[]>([]);
@@ -161,6 +162,15 @@ useEffect(() => {
     setLoading(false); // Ensure loading state is updated when the quiz becomes active
   }
 }, [quiz?.game_state]);
+
+useEffect(() => {
+  if (quiz?.game_state === GameState.QUESTION_ACTIVE && quizId) {
+    const playerId = localStorage.getItem('player_id');
+    if (playerId) {
+      navigate(`/quiz/player/${quizId}/${playerId}`); // Update the URL dynamically
+    }
+  }
+}, [quiz?.game_state, quizId]);
 
   // --------------------------------------------------
   // RESET UI ON QUESTION CHANGE
