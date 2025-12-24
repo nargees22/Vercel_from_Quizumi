@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import type { Player, Quiz, PlayerAnswer } from '../../types.ts';
 import { Clan } from '../../types.ts';
@@ -30,6 +29,7 @@ export const IntermediateLeaderboard: React.FC<{
     const [isAnimating, setIsAnimating] = useState(false);
     const playerClan = useMemo(() => players.find(p => p.id === highlightPlayerId)?.clan, [players, highlightPlayerId]);
 
+    // Add a fallback for quiz.config to prevent runtime errors
     useEffect(() => {
         if (!quiz || players.length === 0) return;
 
@@ -38,7 +38,10 @@ export const IntermediateLeaderboard: React.FC<{
 
         const isFirstQuestionLeaderboard = quiz.currentQuestionIndex === 0;
 
-        if (quiz.config.clanBased) {
+        // Ensure quiz.config is defined before accessing its properties
+        const isClanBased = quiz.config?.clanBased || false;
+
+        if (isClanBased) {
             const activeClans = Array.from(new Set(players.map(p => p.clan).filter(Boolean))) as Clan[];
 
             const clanStats: Record<string, { totalScore: number; playerCount: number; prevTotalScore: number }> = {};
@@ -57,7 +60,7 @@ export const IntermediateLeaderboard: React.FC<{
             }
 
             const getAvg = (total: number, count: number) => count > 0 ? total / count : 0;
-            
+
             const currentClanScores = Object.fromEntries(
                 activeClans.map(clan => [clan, getAvg(clanStats[clan].totalScore, clanStats[clan].playerCount)])
             );
@@ -68,7 +71,7 @@ export const IntermediateLeaderboard: React.FC<{
             const currentSortedClans = Object.keys(currentClanScores).sort((a, b) => currentClanScores[b] - currentClanScores[a]);
             const prevSortedClans = Object.keys(prevClanScores).sort((a, b) => prevClanScores[b] - prevClanScores[a]);
             const prevRankMap = new Map(prevSortedClans.map((clan, i) => [clan, i]));
-            
+
             const data = currentSortedClans.map((clanStr, newIndex) => {
                 const clan = clanStr as Clan;
                 const oldIndex = isFirstQuestionLeaderboard ? newIndex : (prevRankMap.get(clan) ?? newIndex);
@@ -91,9 +94,10 @@ export const IntermediateLeaderboard: React.FC<{
                 const prevScore = p.score - (lastAnswer?.score || 0);
                 return [p.id, prevScore];
             }));
-            const prevSortedPlayers = [...players].sort((a, b) => (prevScores.get(b.id) || 0) - (prevScores.get(a.id) || 0));
+            // Ensure values from prevScores are treated as numbers
+            const prevSortedPlayers = [...players].sort((a, b) => (Number(prevScores.get(b.id)) || 0) - (Number(prevScores.get(a.id)) || 0));
             const prevRankMap = new Map(prevSortedPlayers.map((p, i) => [p.id, i]));
-            
+
             const data = currentSortedPlayers.map((player, newIndex) => {
                 const oldIndex = isFirstQuestionLeaderboard ? newIndex : (prevRankMap.get(player.id) ?? newIndex);
                 const lastAnswer = player.answers.find(a => a.questionId === question.id);
@@ -108,7 +112,7 @@ export const IntermediateLeaderboard: React.FC<{
             });
             setLeaderboardData(data);
         }
-        
+
         if (animate) {
             setIsAnimating(true);
             const timer = setTimeout(() => setIsAnimating(false), players.length * 100 + 500);
