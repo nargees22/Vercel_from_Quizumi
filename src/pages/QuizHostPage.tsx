@@ -28,6 +28,9 @@ interface QuizPlayer {
 const QuizHostPage = () => {
   const { quizId } = useParams<{ quizId: string }>();
 
+  // Log the quizId to debug its value
+  console.log('Current quizId:', quizId);
+
   const [quiz, setQuiz] = useState<any>(null);
   const [players, setPlayers] = useState<QuizPlayer[]>([]);
   const [answers, setAnswers] = useState<any[]>([]);
