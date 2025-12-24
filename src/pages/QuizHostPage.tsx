@@ -214,10 +214,15 @@ const QuizHostPage = () => {
     return (
       <div className="mt-6 flex justify-center">
         <TimerCircle
-          duration={question.timeLimit}
-          start
-          onComplete={() => updateGameState(GameState.QUESTION_RESULT)}
-        />
+  duration={question.timeLimit}
+  quizId={quiz.id}
+  questionIndex={quiz.currentIndex}
+  onComplete={() => {
+    // what should happen when timer ends
+    // updateGameState(GameState.QUESTION_RESULT);
+  }}
+/>
+
       </div>
     );
   };

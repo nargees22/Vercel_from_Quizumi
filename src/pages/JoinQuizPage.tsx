@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { supabase } from '../service/supabase.ts';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
@@ -10,15 +11,16 @@ import Button from '../components/Button.tsx';
 const JoinQuizPage = () => {
     
     const { quizId: paramQuizId } = useParams<{ quizId: string }>();
-    if (paramQuizId && !/^[A-Z0-9]{6}$/.test(paramQuizId)) {
-      return (
-        <div className="flex items-center justify-center h-screen">
-          <div className="text-center text-red-500 text-lg font-semibold">
-            Invalid Quiz Code in URL
-          </div>
-        </div>
-      );
-    }
+    if (paramQuizId && paramQuizId.length !== 6) {
+  return (
+    <div className="flex items-center justify-center h-screen">
+      <div className="text-center text-red-500 text-lg font-semibold">
+        Invalid Quiz Code in URL
+      </div>
+    </div>
+  );
+
+}
     const location = useLocation();
     const navigate = useNavigate();
 
@@ -113,13 +115,10 @@ const JoinQuizPage = () => {
         localStorage.setItem(`quiz-player-${targetQuizId}`, playerId);
         //navigate(`/player-lobby/${targetQuizId}`);
        //navigate(`/#/player-lobby/${targetQuizId}`);
-    //  navigate(`/lobby/${quizId}`);
-     //navigate(`/#/lobby/${quizId}`);
-
+       navigate(`/lobby/${quizId}`);
 
       // navigate(`/player-lobby/${targetQuizId}`);
- navigate(`/player-lobby/${targetQuizId}`);
- //navigate(`/player-lobby/${quizId}`);
+//navigate(`/player-lobby/${quizId}`);
 
     };
 
