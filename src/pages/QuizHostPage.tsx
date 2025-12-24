@@ -290,6 +290,12 @@ useEffect(() => {
     }
 
     console.log('Fetched latest answers:', latestAnswers); // Debug log
+    if (latestAnswers) {
+      latestAnswers.forEach((answer) => {
+        console.log('Answer details:', answer); // Debug log
+      });
+    }
+
     setAnswers(latestAnswers || []);
   };
 
