@@ -73,7 +73,7 @@ const QuizPlayerPage = () => {
   }, [quizId]);
 
   // --------------------------------------------------
-  // REALTIME QUIZ STATE SYNC
+  // ENHANCED REALTIME QUIZ STATE SYNC
   // --------------------------------------------------
   useEffect(() => {
     if (!quizId) return;
@@ -88,7 +88,10 @@ const QuizPlayerPage = () => {
           table: 'quiz_master_structure',
           filter: `quiz_id=eq.${quizId}`,
         },
-        () => fetchData()
+        (payload) => {
+          console.log('Real-time update received:', payload);
+          fetchData();
+        }
       )
       .subscribe();
 
@@ -143,6 +146,23 @@ const QuizPlayerPage = () => {
       fetchPlayers();
     }
   }, [quiz?.game_state]);
+
+  // --------------------------------------------------
+  // DEBUGGING THE INCREMENT_PLAYER_SCORE RPC
+  // --------------------------------------------------
+  const handleScoreUpdate = async (score) => {
+    const { error } = await supabase.rpc('increment_player_score', {
+      p_quiz_id: quizId,
+      p_player_id: playerId,
+      p_score: score,
+    });
+
+    if (error) {
+      console.error('Failed to update score:', error);
+    } else {
+      console.log('Score updated successfully');
+    }
+  };
 
   // --------------------------------------------------
   // GUARDS
@@ -223,11 +243,7 @@ const QuizPlayerPage = () => {
       });
 
       // 2️⃣ Atomic score update
-      await supabase.rpc('increment_player_score', {
-        p_quiz_id: quizId,
-        p_player_id: playerId,
-        p_score: score,
-      });
+      await handleScoreUpdate(score);
     };
 
     return (
