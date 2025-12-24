@@ -58,7 +58,7 @@ export const IntermediateLeaderboard: React.FC<{
                 if (p.clan) {
                     clanStats[p.clan].playerCount++;
                     clanStats[p.clan].totalScore += p.score;
-                    const lastAnswer = (p.answers || []).find(a => a.questionId === question.id);
+                    const lastAnswer = p.answers.find(a => a.questionId === question.id);
                     const prevScore = p.score - (lastAnswer?.score || 0);
                     clanStats[p.clan].prevTotalScore += prevScore;
                 }
@@ -84,7 +84,7 @@ export const IntermediateLeaderboard: React.FC<{
                 const clanPlayers = players
                     .filter(p => p.clan === clan)
                     .map(p => {
-                        const lastAnswer = (p.answers || []).find(a => a.questionId === question.id);
+                        const lastAnswer = p.answers.find(a => a.questionId === question.id);
                         return { player: p, timeTaken: lastAnswer?.timeTaken };
                     })
                     .sort((a, b) => b.player.score - a.player.score)
@@ -95,7 +95,7 @@ export const IntermediateLeaderboard: React.FC<{
         } else {
             const currentSortedPlayers = [...players].sort((a, b) => b.score - a.score);
             const prevScores = new Map(players.map(p => {
-                const lastAnswer = (p.answers || []).find(a => a.questionId === question.id);
+                const lastAnswer = p.answers.find(a => a.questionId === question.id);
                 const prevScore = p.score - (lastAnswer?.score || 0);
                 return [p.id, prevScore];
             }));
@@ -105,7 +105,7 @@ export const IntermediateLeaderboard: React.FC<{
 
             const data = currentSortedPlayers.map((player, newIndex) => {
                 const oldIndex = isFirstQuestionLeaderboard ? newIndex : (prevRankMap.get(player.id) ?? newIndex);
-                const lastAnswer = (player.answers || []).find(a => a.questionId === question.id);
+                const lastAnswer = player.answers.find(a => a.questionId === question.id);
                 return {
                     player,
                     oldRank: oldIndex,
