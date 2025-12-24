@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { supabase } from '../service/supabase.ts';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
@@ -24,12 +23,7 @@ const JoinQuizPage = () => {
     const location = useLocation();
     const navigate = useNavigate();
 
-    // const quizIdFromUrl = useMemo(() => {
-    //     const queryParams = new URLSearchParams(location.search);
-    //     return queryParams.get('quizCode') || paramQuizId;
-    // }, [location.search, paramQuizId]);
     const quizIdFromUrl = paramQuizId;
-
 
     const [quizId, setQuizId] = useState(quizIdFromUrl || '');
     const [name, setName] = useState('');
@@ -113,16 +107,7 @@ const JoinQuizPage = () => {
         }
 
         localStorage.setItem(`quiz-player-${targetQuizId}`, playerId);
-        //navigate(`/player-lobby/${targetQuizId}`);
-       //navigate(`/#/player-lobby/${targetQuizId}`);
-    //  navigate(`/lobby/${quizId}`);
-     //navigate(`/#/lobby/${quizId}`);
-
-
-      // navigate(`/player-lobby/${targetQuizId}`);
- navigate(`/player-lobby/${targetQuizId}`);
- //navigate(`/player-lobby/${quizId}`);
-
+        navigate(`/player-lobby/${targetQuizId}`);
     };
 
     const ClanSelection = () => {
