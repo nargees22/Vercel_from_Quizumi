@@ -133,28 +133,37 @@ const joinQuiz = async () => {
   //     supabase.removeChannel(channel);
   //   };
   // }, [quizId]);
-  useEffect(() => {
-    if (!quizId) return;
+ useEffect(() => {
+  if (!quizId) return;
 
-    const channel = supabase
-      .channel(`player-quiz-${quizId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'quiz_master_structure',
-          filter: `quiz_id=eq.${quizId}`,
-        },
-        payload => {
-          setQuiz(payload.new);
-        }
-      )
-      .subscribe();
+  // Initial fetch is handled by your other useEffect, 
+  // but we define the refresh logic here
+  const handleChanges = (payload: any) => {
+    console.log('Change received!', payload);
+    // Instead of setting state with payload.new, fetch the fresh data
+    fetchData(); 
+  };
 
-    return () => supabase.removeChannel(channel);
-  }, [quizId]);
+  const channel = supabase
+    .channel(`player-quiz-${quizId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: '*', // Listen for all updates/deletes/inserts
+        schema: 'public',
+        table: 'quiz_master_structure',
+        filter: `quiz_id=eq.${quizId}`,
+      },
+      handleChanges
+    )
+    .subscribe((status) => {
+      console.log("Subscription status:", status);
+    });
 
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}, [quizId]);
 
 
   // --------------------------------------------------
