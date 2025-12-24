@@ -32,6 +32,10 @@ const QuizHostPage = () => {
   const [players, setPlayers] = useState<QuizPlayer[]>([]);
   const [answers, setAnswers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  useEffect(() => {
+  console.log("✅ HOST quizId from React:", quizId);
+}, [quizId]);
+
 
   /* ---------------------------- LOAD QUIZ DATA ---------------------------- */
 
