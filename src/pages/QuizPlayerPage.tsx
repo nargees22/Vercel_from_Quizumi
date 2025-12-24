@@ -34,8 +34,6 @@ const QuizPlayerPage = () => {
   const questionStartRef = React.useRef<number | null>(null);
   const [players, setPlayers] = useState<any[]>([]);
 
-
-
   // --------------------------------------------------
   // STABLE PLAYER ID (persists on refresh)
   // --------------------------------------------------
@@ -140,17 +138,15 @@ const joinQuiz = async () => {
               ...updatedQuiz,
             }));
 
-            // Ensure game state transitions are handled
-            if (updatedQuiz.game_state === GameState.QUESTION_ACTIVE) {
-              const { data: updatedQuestions } = await supabase
-                .from('quiz_questions')
-                .select('*')
-                .eq('quiz_id', quizId)
-                .order('question_order');
+            // Fetch updated questions dynamically
+            const { data: updatedQuestions } = await supabase
+              .from('quiz_questions')
+              .select('*')
+              .eq('quiz_id', quizId)
+              .order('question_order');
 
-              if (updatedQuestions) {
-                setQuestions(updatedQuestions);
-              }
+            if (updatedQuestions) {
+              setQuestions(updatedQuestions);
             }
           }
         }
@@ -165,7 +161,6 @@ useEffect(() => {
     setLoading(false); // Ensure loading state is updated when the quiz becomes active
   }
 }, [quiz?.game_state]);
-
 
   // --------------------------------------------------
   // RESET UI ON QUESTION CHANGE
@@ -196,9 +191,9 @@ useEffect(() => {
   // --------------------------------------------------
   // LOBBY
   // --------------------------------------------------
-  // if (quiz.game_state === GameState.LOBBY) {
-  //   return <PageLoader message="Waiting for host to start the quiz..." />;
-  // }
+  if (quiz?.game_state === GameState.LOBBY) {
+    return <PageLoader message="Waiting for host to start the quiz..." />;
+  }
   if (quiz.game_state === GameState.LOBBY) {
   return (
     <div className="flex flex-col items-center mt-20 gap-6">
