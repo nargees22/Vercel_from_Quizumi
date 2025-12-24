@@ -221,19 +221,23 @@ const QuizHostPage = () => {
       ? quiz.questions[quiz.currentIndex]
       : null;
 
-  const answerCounts = useMemo(() => {
-    if (!question) return [];
-    const counts = new Array(question.options.length).fill(0);
+const answerCounts = useMemo(() => {
+  if (!question || !answers) return [];
 
-    answers
-      .filter(a => a.question_id === question.id)
-      .forEach(a => {
-        const idx = a.answer?.index;
-        if (typeof idx === 'number') counts[idx]++;
-      });
+  const counts = new Array(question.options.length).fill(0);
 
-    return counts;
-  }, [answers, question]);
+  answers
+    .filter(a => a.question_id === question.id)
+    .forEach(a => {
+      const idx = a.answer; // ✅ FIX
+      if (typeof idx === 'number' && idx >= 0 && idx < counts.length) {
+        counts[idx]++;
+      }
+    });
+
+  return counts;
+}, [answers, question]);
+
 
   const isLastQuestion =
     quiz && quiz.questions
