@@ -112,27 +112,6 @@ const joinQuiz = async () => {
   // --------------------------------------------------
   // REALTIME LISTENER (HOST → PLAYER SYNC)
   // --------------------------------------------------
-  // useEffect(() => {
-  //   fetchData();
-
-  //   const channel = supabase
-  //     .channel(`player-${quizId}`)
-  //     .on(
-  //       'postgres_changes',
-  //       {
-  //         event: '*',
-  //         schema: 'public',
-  //         table: 'quiz_master_structure',
-  //         filter: `quiz_id=eq.${quizId}`,
-  //       },
-  //       () => fetchData()
-  //     )
-  //     .subscribe();
-
-  //   return () => {
-  //     supabase.removeChannel(channel);
-  //   };
-  // }, [quizId]);
   useEffect(() => {
     if (!quizId) return;
 
@@ -146,8 +125,25 @@ const joinQuiz = async () => {
           table: 'quiz_master_structure',
           filter: `quiz_id=eq.${quizId}`,
         },
-        payload => {
-          setQuiz(payload.new);
+        async (payload) => {
+          const updatedQuiz = payload.new;
+          if (updatedQuiz) {
+            setQuiz((prevQuiz) => ({
+              ...prevQuiz,
+              ...updatedQuiz,
+            }));
+
+            // Fetch updated questions if necessary
+            const { data: updatedQuestions } = await supabase
+              .from('quiz_questions')
+              .select('*')
+              .eq('quiz_id', quizId)
+              .order('question_order');
+
+            if (updatedQuestions) {
+              setQuestions(updatedQuestions);
+            }
+          }
         }
       )
       .subscribe();
@@ -222,56 +218,6 @@ const joinQuiz = async () => {
       question.option_4,
     ].filter(Boolean);
 
-    // ✅ FINAL ANSWER HANDLER (DB WRITE)
-    // const handleSelect = async (index: number) => {
-    //   if (selectedAnswer !== null) return;
-
-    //   setSelectedAnswer(index);
-
-    //   const isCorrect = index === question.correct_answer_index;
-    //   setAnswerResult(isCorrect ? 'correct' : 'wrong');
-
-    //   // Debugging: Log the payload being sent to the database
-    //   console.log('Submitting answer:', {
-    //     quiz_id: quizId,
-    //     question_id: question.pk_id,
-    //     player_id: 'player_unique_id', // Replace with actual player ID
-    //     answer: index,
-    //     is_correct: isCorrect,
-    //   });
-
-    //   // Send the answer to the database
-    //   try {
-    //     await supabase
-    //       .from('quiz_answers')
-    //       .insert({
-    //         quiz_id: quizId,
-    //         question_id: question.pk_id,
-    //         player_id: 'player_unique_id', // Replace with actual player ID
-    //         answer: index,
-    //         is_correct: isCorrect,
-    //       });
-    //   } catch (error) {
-    //     console.error('Failed to submit answer:', error);
-    //   }
-    // };
-    // const handleSelect = async (index: number) => {
-    //   if (selectedAnswer !== null) return;
-
-    //   setSelectedAnswer(index);
-
-    //   setAnswerResult(
-    //     index === question.correct_answer_index ? 'correct' : 'wrong'
-    //   );
-
-    //   await supabase.from('quiz_answers').insert({
-    //     quiz_id: quiz.quiz_id,
-    //     player_id: quiz.player_id ?? 'anonymous',
-    //     question_id: String(question.pk_id), // ✅ STRING
-    //     answer: { index },                   // ✅ JSONB
-    //     score: index === question.correct_answer_index ? 1 : 0,
-    //   });
-    // };
     const handleSelect = async (index: number) => {
       if (selectedAnswer !== null || !questionStartRef.current) return;
 
