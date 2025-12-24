@@ -163,7 +163,12 @@ const QuizHostPage = () => {
         (payload) => {
           const newAnswer = payload.new;
           if (newAnswer && newAnswer.question_id) {
-            setAnswers((prev) => [...prev, newAnswer]);
+            setAnswers((prev) => {
+              const updatedAnswers = [...prev, newAnswer];
+              console.log('New answer received:', newAnswer); // Debug log
+              console.log('Updated answers state:', updatedAnswers); // Debug log
+              return updatedAnswers;
+            });
           }
         }
       )
@@ -171,8 +176,6 @@ const QuizHostPage = () => {
 
     return () => supabase.removeChannel(channel);
   }, [quizId]);
-
-  /* ---------------------- REALTIME: PLAYER SCORES ---------------------- */
 
   /* ---------------------- REALTIME: PLAYER SCORES ---------------------- */
 
@@ -240,14 +243,19 @@ useEffect(() => {
     const counts = new Array(question.options.length).fill(0);
 
     answers
-      .filter(a => a.question_id === question.id && a.answer?.index !== undefined) // Ensure question_id matches and answer index exists
-      .forEach(a => {
-        const idx = a.answer.index;
+      .filter((a) => {
+        const isMatchingQuestion = a.question_id === question.id;
+        console.log('Filtering answer:', a, 'Matching question:', isMatchingQuestion); // Debug log
+        return isMatchingQuestion;
+      })
+      .forEach((a) => {
+        const idx = a.answer?.index;
         if (typeof idx === 'number' && idx >= 0 && idx < counts.length) {
           counts[idx]++;
         }
       });
 
+    console.log('Computed answer counts:', counts); // Debug log
     return counts;
   }, [answers, question]);
 
