@@ -167,10 +167,13 @@ useEffect(() => {
   if (quiz?.game_state === GameState.QUESTION_ACTIVE && quizId) {
     const playerId = localStorage.getItem('player_id');
     if (playerId) {
-      navigate(`/quiz/player/${quizId}/${playerId}`); // Update the URL dynamically
+      const newUrl = `/quiz/player/${quizId}/${playerId}`;
+      if (window.location.hash !== `#${newUrl}`) {
+        navigate(newUrl); // Navigate only if the URL is different
+      }
     }
   }
-}, [quiz?.game_state, quizId]);
+}, [quiz?.game_state, quizId, navigate]);
 
   // --------------------------------------------------
   // RESET UI ON QUESTION CHANGE
