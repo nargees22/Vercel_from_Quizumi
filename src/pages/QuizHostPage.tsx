@@ -237,9 +237,9 @@ useEffect(() => {
     const counts = new Array(question.options.length).fill(0);
 
     answers
-      .filter(a => a.question_id === question.id) // Ensure question_id matches exactly
+      .filter(a => a.question_id === question.id && a.answer?.index !== undefined) // Ensure question_id matches and answer index exists
       .forEach(a => {
-        const idx = a.answer?.index;
+        const idx = a.answer.index;
         if (typeof idx === 'number' && idx >= 0 && idx < counts.length) {
           counts[idx]++;
         }
