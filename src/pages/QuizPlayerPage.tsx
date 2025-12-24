@@ -160,6 +160,11 @@ const joinQuiz = async () => {
     return () => supabase.removeChannel(channel);
   }, [quizId]);
 
+useEffect(() => {
+  if (quiz?.game_state === GameState.QUESTION_ACTIVE) {
+    setLoading(false); // Ensure loading state is updated when the quiz becomes active
+  }
+}, [quiz?.game_state]);
 
 
   // --------------------------------------------------
