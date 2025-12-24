@@ -21,8 +21,6 @@ interface QuizPlayer {
   player_id: string;
   player_name: string;
   score: number;
-  avatar: string | null;
-  clan: string | null;
 }
 
 /* -------------------------------- COMPONENT -------------------------------- */
@@ -58,7 +56,7 @@ const QuizHostPage = () => {
 
         supabase
           .from('quiz_players')
-          .select('quiz_id, player_id, player_name, score, avatar, clan')
+          .select('*')
           .eq('quiz_id', quizId)
           .order('score', { ascending: false }),
       ]);
@@ -75,11 +73,11 @@ const QuizHostPage = () => {
       currentIndex: quizRow.current_question_index ?? 0,
       showQuestionToPlayers: quizRow.show_question_to_players,
       config: {
-        clanBased: quizRow.clan_based ?? false,
-        titanName: quizRow.titan_name ?? null,
-        defenderName: quizRow.defender_name ?? null,
-        clanAssignment: quizRow.clan_assignment ?? null,
-      },
+    clanBased: quizRow.clan_based ?? false,
+    titanName: quizRow.titan_name ?? null,
+    defenderName: quizRow.defender_name ?? null,
+    clanAssignment: quizRow.clan_assignment ?? null,
+  },
       questions: questionRows.map((q: any) => ({
         id: q.pk_id,
         text: q.question_text,
@@ -104,7 +102,7 @@ const QuizHostPage = () => {
   useEffect(() => {
     if (!quizId) return;
 
-    loadQuiz();
+    loadQuiz(); // initial load only
 
     const channel = supabase
       .channel(`host-${quizId}`)
@@ -120,21 +118,31 @@ const QuizHostPage = () => {
           const row = payload.new as QuizMasterRow;
 
           setQuiz(prev => {
-            if (!prev || !row) return prev;
-            return {
-              ...prev,
-              gameState: row.game_state,
-              currentIndex:
-                row.current_question_index ?? prev.currentIndex,
-              showQuestionToPlayers: row.show_question_to_players,
-              config: prev.config,
-            };
-          });
+    if (!prev || !row) return prev;
+
+    return {
+      ...prev,
+      gameState: row.game_state,
+      currentIndex:
+        row.current_question_index ?? prev.currentIndex,
+      showQuestionToPlayers: row.show_question_to_players,
+
+      // ✅ GUARANTEE CONFIG NEVER DISAPPEARS
+      config: prev.config ?? {
+        clanBased: false,
+        titanName: null,
+        defenderName: null,
+        clanAssignment: null,
+      },
+    };
+  });
         }
       )
       .subscribe();
 
-    return () => supabase.removeChannel(channel);
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [quizId]);
 
   /* ---------------------- REALTIME: PLAYER ANSWERS ---------------------- */
@@ -163,53 +171,55 @@ const QuizHostPage = () => {
 
   /* ---------------------- REALTIME: PLAYER SCORES ---------------------- */
 
-  useEffect(() => {
-    if (!quizId) return;
+  /* ---------------------- REALTIME: PLAYER SCORES ---------------------- */
 
-    const channel = supabase
-      .channel(`players-${quizId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'quiz_players',
-          filter: `quiz_id=eq.${quizId}`,
-        },
-        payload => {
-          const updatedPlayer = payload.new as QuizPlayer;
+useEffect(() => {
+  if (!quizId) return;
 
-          setPlayers(prev => {
-           const map = new Map<string, QuizPlayer>(
-  prev.map(p => [p.player_id, p])
-);
+  const channel = supabase
+    .channel(`players-${quizId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'quiz_players',
+        filter: `quiz_id=eq.${quizId}`,
+      },
+      payload => {
+        const newPlayer = payload.new as QuizPlayer;
 
-            map.set(updatedPlayer.player_id, updatedPlayer);
-            return Array.from(map.values()).sort(
-              (a, b) => b.score - a.score
-            );
-          });
-        }
-      )
-      .subscribe();
+        setPlayers(prev => {
+          const updated = [...prev];
+          const idx = updated.findIndex(
+            p => p.player_id === newPlayer.player_id
+          );
 
-    return () => supabase.removeChannel(channel);
-  }, [quizId]);
+          if (idx >= 0) updated[idx] = newPlayer;
+          else updated.push(newPlayer);
 
-  /* ---------------------- FETCH LEADERBOARD ON HOST ---------------------- */
-
-  useEffect(() => {
-    if (quiz?.gameState === GameState.LEADERBOARD && quizId) {
-      supabase
-        .from('quiz_players')
-        .select('quiz_id, player_id, player_name, score, avatar, clan')
-        .eq('quiz_id', quizId)
-        .order('score', { ascending: false })
-        .then(({ data }) => {
-          if (data) setPlayers(data);
+          return updated.sort((a, b) => b.score - a.score);
         });
-    }
-  }, [quiz?.gameState, quizId]);
+      }
+    )
+    .subscribe();
+
+  return () => supabase.removeChannel(channel);
+}, [quizId]);
+/* ---------------------- FETCH LEADERBOARD ON HOST ---------------------- */
+
+useEffect(() => {
+  if (quiz?.gameState === GameState.LEADERBOARD && quizId) {
+    supabase
+      .from('quiz_players')
+      .select('*')
+      .eq('quiz_id', quizId)
+      .order('score', { ascending: false })
+      .then(({ data }) => {
+        if (data) setPlayers(data);
+      });
+  }
+}, [quiz?.gameState, quizId]);
 
   /* --------------------------- DERIVED VALUES --------------------------- */
 
@@ -221,23 +231,22 @@ const QuizHostPage = () => {
       ? quiz.questions[quiz.currentIndex]
       : null;
 
-const answerCounts = useMemo(() => {
-  if (!question || !answers) return [];
+  const answerCounts = useMemo(() => {
+    if (!question || !answers) return [];
 
-  const counts = new Array(question.options.length).fill(0);
+    const counts = new Array(question.options.length).fill(0);
 
-  answers
-    .filter(a => a.question_id === question.id)
-    .forEach(a => {
-      const idx = a.answer; // ✅ FIX
-      if (typeof idx === 'number' && idx >= 0 && idx < counts.length) {
-        counts[idx]++;
-      }
-    });
+    answers
+      .filter(a => a.question_id === question.id) // Ensure question_id matches exactly
+      .forEach(a => {
+        const idx = a.answer?.index;
+        if (typeof idx === 'number' && idx >= 0 && idx < counts.length) {
+          counts[idx]++;
+        }
+      });
 
-  return counts;
-}, [answers, question]);
-
+    return counts;
+  }, [answers, question]);
 
   const isLastQuestion =
     quiz && quiz.questions
@@ -250,6 +259,7 @@ const answerCounts = useMemo(() => {
     if (!quizId || !quiz) return;
 
     let nextIndex = quiz.currentIndex;
+
     if (
       next === GameState.QUESTION_ACTIVE &&
       quiz.gameState === GameState.LEADERBOARD
@@ -257,7 +267,7 @@ const answerCounts = useMemo(() => {
       nextIndex += 1;
     }
 
-    setQuiz(prev => ({
+    setQuiz((prev: any) => ({
       ...prev,
       gameState: next,
       currentIndex: nextIndex,
@@ -293,23 +303,19 @@ const answerCounts = useMemo(() => {
 
           <div className="grid grid-cols-2 gap-4">
             {question.options.map((opt: string, i: number) => (
-              <div
-                key={i}
-                className="p-4 bg-slate-200 rounded text-center"
-              >
+              <div key={i} className="p-4 bg-slate-200 rounded text-center">
                 {opt}
               </div>
             ))}
           </div>
 
-          <div className="mt-6 flex justify-center">
-            <TimerCircle
-              duration={question.timeLimit}
-              quizId={quizId}
-              questionIndex={quiz.currentIndex}
-              onComplete={() => {}}
-            />
-          </div>
+         <TimerCircle
+  duration={question.timeLimit}
+  quizId={quizId}
+  questionIndex={quiz.currentIndex}
+  onComplete={() => {}} // ❌ HOST should not auto-change state
+/> 
+
         </div>
       )}
 
@@ -317,49 +323,45 @@ const answerCounts = useMemo(() => {
         <div className="w-full max-w-3xl mb-8">
           {question.options.map((opt, i) => (
             <div key={i} className="p-3 bg-slate-200 mb-2 rounded">
-              {opt} — {answerCounts[i]} responses
+              {opt} — {answerCounts[i]} {answerCounts[i] === 1 ? 'response' : 'responses'}
             </div>
           ))}
         </div>
       )}
 
       {quiz.gameState === GameState.LEADERBOARD && (
-        players.length > 0 ? (
-          <IntermediateLeaderboard players={players} quiz={quiz} />
-        ) : (
-          <p className="text-gray-500 font-semibold">
-            Waiting for players...
-          </p>
-        )
+        <IntermediateLeaderboard players={players} quiz={quiz} />
       )}
 
       <div className="mt-8 flex gap-4">
-        {quiz.gameState === GameState.QUESTION_ACTIVE && (
-          <Button
-            onClick={() => updateGameState(GameState.QUESTION_RESULT)}
-            className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-bold"
-          >
-            Show Results
-          </Button>
-        )}
+       {quiz.gameState === GameState.QUESTION_ACTIVE && (
+  <Button
+    onClick={() => updateGameState(GameState.QUESTION_RESULT)}
+    className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-bold"
+  >
+    Show Results
+  </Button>
+)}
 
-        {quiz.gameState === GameState.QUESTION_RESULT && (
-          <Button
-            onClick={() => updateGameState(GameState.LEADERBOARD)}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-bold"
-          >
-            {isLastQuestion ? 'Final Leaderboard' : 'Show Leaderboard'}
-          </Button>
-        )}
+{quiz.gameState === GameState.QUESTION_RESULT && (
+  <Button
+    onClick={() => updateGameState(GameState.LEADERBOARD)}
+    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-bold"
+  >
+    {isLastQuestion ? 'Final Leaderboard' : 'Show Leaderboard'}
+  </Button>
+)}
 
-        {quiz.gameState === GameState.LEADERBOARD && !isLastQuestion && (
-          <Button
-            onClick={() => updateGameState(GameState.QUESTION_ACTIVE)}
-            className="bg-gl-orange-600 hover:bg-gl-orange-700 text-white px-6 py-3 rounded-lg font-bold"
-          >
-            Next Question
-          </Button>
-        )}
+
+       {quiz.gameState === GameState.LEADERBOARD && !isLastQuestion && (
+  <Button
+    onClick={() => updateGameState(GameState.QUESTION_ACTIVE)}
+    className="bg-gl-orange-600 hover:bg-gl-orange-700 text-white px-6 py-3 rounded-lg font-bold"
+  >
+    Next Question
+  </Button>
+)}
+
       </div>
     </div>
   );
