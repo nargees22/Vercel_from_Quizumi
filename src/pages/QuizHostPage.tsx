@@ -200,18 +200,18 @@ const QuizHostPage = () => {
   }, [quizId]);
 /* ---------------------- FETCH LEADERBOARD ON HOST ---------------------- */
 
-useEffect(() => {
-  if (quiz?.gameState === GameState.LEADERBOARD && quizId) {
-    supabase
-      .from('quiz_players')
-      .select('*')
-      .eq('quiz_id', quizId)
-      .order('score', { ascending: false })
-      .then(({ data }) => {
-        if (data) setPlayers(data);
-      });
-  }
-}, [quiz?.gameState, quizId]);
+// useEffect(() => {
+//   if (quiz?.gameState === GameState.LEADERBOARD && quizId) {
+//     supabase
+//       .from('quiz_players')
+//       .select('*')
+//       .eq('quiz_id', quizId)
+//       .order('score', { ascending: false })
+//       .then(({ data }) => {
+//         if (data) setPlayers(data);
+//       });
+//   }
+// }, [quiz?.gameState, quizId]);
 
   /* --------------------------- DERIVED VALUES --------------------------- */
 
@@ -299,12 +299,18 @@ useEffect(() => {
           </div>
 
          <div className="flex justify-center mb-6">
-      <TimerCircle
+      {/* <TimerCircle
         duration={question.time_limit ?? 30}
         quizId={quizId}
         questionIndex={quiz.current_question_index}
         onComplete={() => {}} // ❌ Player should NOT auto-change state
-      />
+      /> */}
+      <TimerCircle
+  duration={question.timeLimit}
+  quizId={quizId}
+  questionIndex={quiz.currentIndex}
+  onComplete={() => {}}
+ />
     </div>
         </div>
       )}
