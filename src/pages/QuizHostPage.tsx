@@ -232,14 +232,17 @@ useEffect(() => {
       : null;
 
   const answerCounts = useMemo(() => {
-    if (!question) return [];
+    if (!question || !answers) return [];
+
     const counts = new Array(question.options.length).fill(0);
 
     answers
-      .filter(a => String(a.question_id) === String(question.id))
+      .filter(a => String(a.question_id) === String(question.id)) // Ensure question_id matches
       .forEach(a => {
         const idx = a.answer?.index;
-        if (typeof idx === 'number') counts[idx]++;
+        if (typeof idx === 'number' && idx >= 0 && idx < counts.length) {
+          counts[idx]++;
+        }
       });
 
     return counts;

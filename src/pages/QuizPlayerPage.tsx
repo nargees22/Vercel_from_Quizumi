@@ -15,10 +15,17 @@ interface QuestionRow {
   correct_answer_index?: number;
 }
 
+interface Quiz {
+  game_state: GameState;
+  current_question_index: number;
+  show_question_to_players: boolean;
+  [key: string]: any;
+}
+
 const QuizPlayerPage = () => {
   const { quizId } = useParams<{ quizId: string }>();
 
-  const [quiz, setQuiz] = useState<any>(null);
+  const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [questions, setQuestions] = useState<QuestionRow[]>([]);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [answerResult, setAnswerResult] = useState<'correct' | 'wrong' | null>(null);
@@ -90,7 +97,44 @@ const QuizPlayerPage = () => {
           table: 'quiz_master_structure',
           filter: `quiz_id=eq.${quizId}`,
         },
-        () => fetchData()
+        (payload) => {
+          if (payload.new) {
+            setQuiz((prevQuiz) => ({
+              ...prevQuiz,
+              ...payload.new,
+            }));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [quizId]);
+
+  useEffect(() => {
+    if (!quizId) return;
+
+    const channel = supabase
+      .channel(`player-${quizId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'quiz_master_structure',
+          filter: `quiz_id=eq.${quizId}`,
+        },
+        payload => {
+          const updatedQuiz = payload.new as Quiz;
+          setQuiz(prev => ({
+            ...prev,
+            game_state: updatedQuiz.game_state,
+            current_question_index: updatedQuiz.current_question_index,
+            show_question_to_players: updatedQuiz.show_question_to_players,
+          }));
+        }
       )
       .subscribe();
 
