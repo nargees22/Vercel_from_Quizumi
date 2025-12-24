@@ -138,7 +138,7 @@ const QuizHostPage = () => {
     return () => supabase.removeChannel(channel);
   }, [quizId]);
 
-  /* ---------------------- FETCH LEADERBOARD (THE FIX) ---------------------- */
+  /* ---------------------- FETCH LEADERBOARD ---------------------- */
 
   useEffect(() => {
     if (!quizId) return;
@@ -149,13 +149,7 @@ const QuizHostPage = () => {
         .select('*')
         .eq('quiz_id', quizId)
         .order('score', { ascending: false })
-        .then(({ data, error }) => {
-          if (error) {
-            console.error('❌ Leaderboard fetch failed', error);
-            return;
-          }
-          setPlayers(data ?? []);
-        });
+        .then(({ data }) => setPlayers(data ?? []));
     }
   }, [quiz?.gameState, quizId]);
 
@@ -223,18 +217,38 @@ const QuizHostPage = () => {
     <div className="p-6 flex flex-col items-center">
       <h1 className="text-3xl font-bold mb-6">{quiz.title}</h1>
 
+      {/* QUESTION ACTIVE */}
       {quiz.gameState === GameState.QUESTION_ACTIVE && question && (
-        <>
-          <h2 className="text-xl font-bold mb-4">{question.text}</h2>
-          <TimerCircle
-            duration={question.timeLimit}
-            quizId={quizId}
-            questionIndex={quiz.currentIndex}
-            onComplete={() => {}}
-          />
-        </>
+        <div className="w-full max-w-3xl">
+          <h2 className="text-xl font-bold mb-4 text-center">
+            {question.text}
+          </h2>
+
+          {/* OPTIONS (HOST VIEW) */}
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            {question.options.map((opt: string, i: number) => (
+              <div
+                key={i}
+                className="p-4 bg-slate-200 rounded text-center font-medium"
+              >
+                {opt}
+              </div>
+            ))}
+          </div>
+
+          {/* TIMER (RESET ON QUESTION CHANGE) */}
+          <div className="flex justify-center mb-6">
+            <TimerCircle
+              duration={question.timeLimit}
+              quizId={quizId}
+              questionIndex={quiz.currentIndex}
+              onComplete={() => {}}
+            />
+          </div>
+        </div>
       )}
 
+      {/* QUESTION RESULT */}
       {quiz.gameState === GameState.QUESTION_RESULT && question && (
         <div className="w-full max-w-3xl">
           {question.options.map((opt, i) => (
@@ -245,25 +259,36 @@ const QuizHostPage = () => {
         </div>
       )}
 
+      {/* LEADERBOARD */}
       {quiz.gameState === GameState.LEADERBOARD && (
         <IntermediateLeaderboard players={players} quiz={quiz} />
       )}
 
+      {/* CONTROLS */}
       <div className="mt-8 flex gap-4">
         {quiz.gameState === GameState.QUESTION_ACTIVE && (
-          <Button onClick={() => updateGameState(GameState.QUESTION_RESULT)}>
+          <Button
+            onClick={() => updateGameState(GameState.QUESTION_RESULT)}
+            className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-bold"
+          >
             Show Results
           </Button>
         )}
 
         {quiz.gameState === GameState.QUESTION_RESULT && (
-          <Button onClick={() => updateGameState(GameState.LEADERBOARD)}>
+          <Button
+            onClick={() => updateGameState(GameState.LEADERBOARD)}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-bold"
+          >
             {isLastQuestion ? 'Final Leaderboard' : 'Show Leaderboard'}
           </Button>
         )}
 
         {quiz.gameState === GameState.LEADERBOARD && !isLastQuestion && (
-          <Button onClick={() => updateGameState(GameState.QUESTION_ACTIVE)}>
+          <Button
+            onClick={() => updateGameState(GameState.QUESTION_ACTIVE)}
+            className="bg-gl-orange-600 hover:bg-gl-orange-700 text-white px-6 py-3 rounded-lg font-bold"
+          >
             Next Question
           </Button>
         )}
