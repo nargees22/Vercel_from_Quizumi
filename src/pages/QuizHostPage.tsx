@@ -160,8 +160,11 @@ const QuizHostPage = () => {
           table: 'quiz_answers',
           filter: `quiz_id=eq.${quizId}`,
         },
-        payload => {
-          setAnswers(prev => [...prev, payload.new]);
+        (payload) => {
+          const newAnswer = payload.new;
+          if (newAnswer && newAnswer.question_id) {
+            setAnswers((prev) => [...prev, newAnswer]);
+          }
         }
       )
       .subscribe();
