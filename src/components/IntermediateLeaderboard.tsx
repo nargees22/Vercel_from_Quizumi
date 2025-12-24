@@ -125,6 +125,12 @@ export const IntermediateLeaderboard: React.FC<{
         }
     }, [players, quiz, animate]);
 
+    // Debugging: Log the derived leaderboard data
+    useEffect(() => {
+        console.log('Derived leaderboardData:', leaderboardData);
+        console.log('Derived clanLeaderboardData:', clanLeaderboardData);
+    }, [leaderboardData, clanLeaderboardData]);
+
     return (
         <>
             <div className="w-full max-w-4xl mx-auto animate-fade-in relative">
