@@ -174,6 +174,8 @@ const QuizPlayerPage = () => {
       console.error('Failed to update score:', error);
     } else {
       console.log('Score updated successfully');
+      // Fetch updated leaderboard after score update
+      await fetchPlayers();
     }
   };
 
