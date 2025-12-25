@@ -85,7 +85,8 @@ const [players, setPlayers] = useState<Player[]>([]);
       id: quizRow.quiz_id,
       title: quizRow.title,
       gameState: quizRow.game_state,
-      currentIndex: quizRow.current_question_index ?? 0,
+     currentQuestionIndex: quizRow.current_question_index ?? 0,
+
       showQuestionToPlayers: quizRow.show_question_to_players,
       config: {
         clanBased: quizRow.clan_based ?? false,
