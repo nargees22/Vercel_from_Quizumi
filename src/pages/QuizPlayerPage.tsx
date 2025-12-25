@@ -19,7 +19,7 @@ interface QuestionRow {
 interface Quiz {
   quiz_id: string;
   game_state: GameState;
-  currentQuestionIndex: number;
+   current_question_index: number;
   show_question_to_players: boolean;
 }
 interface QuizPlayerRow {
@@ -153,13 +153,23 @@ const joinQuiz = async () => {
         async (payload) => {
           const updatedQuiz = payload.new as Quiz; // Explicitly cast to Quiz type
           if (updatedQuiz) {
-            setQuiz(prev => ({
-  ...prev,
+//             setQuiz(prev => ({
+//   ...prev,
+//   game_state: updatedQuiz.game_state,
+//   currentQuestionIndex:
+//     updatedQuiz.currentQuestionIndex ?? prev?.currentQuestionIndex ?? 0,
+//   show_question_to_players: updatedQuiz.show_question_to_players,
+// }));
+setQuiz(prev => ({
+  ...(prev ?? updatedQuiz),
   game_state: updatedQuiz.game_state,
-  currentQuestionIndex:
-    updatedQuiz.currentQuestionIndex ?? prev?.currentQuestionIndex ?? 0,
+  current_question_index:
+    updatedQuiz.current_question_index ??
+    prev?.current_question_index ??
+    0,
   show_question_to_players: updatedQuiz.show_question_to_players,
 }));
+
 
             // Fetch updated questions dynamically
             const { data: updatedQuestions } = await supabase
@@ -291,8 +301,12 @@ if (loading) {
   // --------------------------------------------------
 // DERIVED QUESTION (🔥 SINGLE SOURCE OF TRUTH)
 // --------------------------------------------------
+// const question =
+//   questions?.[quiz?.currentQuestionIndex ?? -1] ?? null;
 const question =
-  questions?.[quiz?.currentQuestionIndex ?? -1] ?? null;
+  typeof quiz.current_question_index === 'number'
+    ? questions[quiz.current_question_index]
+    : null;
 
 
   // const question =
