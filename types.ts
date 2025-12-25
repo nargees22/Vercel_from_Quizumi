@@ -50,6 +50,7 @@ export interface Player {
   answers: PlayerAnswer[];
   clan?: Clan;
   lifelines: {
+    fiftyFifty: number;
     pointDoubler: number;
   };
   correctStreak: number;

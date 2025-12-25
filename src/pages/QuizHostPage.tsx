@@ -6,7 +6,8 @@ import TimerCircle from '../components/TimerCircle';
 import { IntermediateLeaderboard } from '../components/IntermediateLeaderboard';
 import Button from '../components/Button';
 import { GameState, QuestionType } from '../../types';
-  import type { Player } from '../../types';
+import type { Player } from '../../types';
+import { useNavigate } from 'react-router-dom';
 
 /* -------------------------------- TYPES -------------------------------- */
 
@@ -30,10 +31,13 @@ interface QuizPlayer {
 
 const QuizHostPage = () => {
   const { quizId } = useParams<{ quizId: string }>();
+   const navigate = useNavigate();
 
   //const [quiz, setQuiz] = useState<any>(null);
   const [quiz, setQuiz] = useState<any>({
     currentQuestionIndex: 0,
+    gameState: GameState.LOBBY,
+    questions: [],
     config: {
       clanBased: false,
       clanNames: {},
@@ -44,7 +48,7 @@ const QuizHostPage = () => {
   //const [players, setPlayers] = useState<QuizPlayer[]>([]);
 
 
-const [players, setPlayers] = useState<Player[]>([]);
+  const [players, setPlayers] = useState<Player[]>([]);
 
   const [answers, setAnswers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -86,7 +90,7 @@ const [players, setPlayers] = useState<Player[]>([]);
       id: quizRow.quiz_id,
       title: quizRow.title,
       gameState: quizRow.game_state,
-     currentQuestionIndex: quizRow.current_question_index ?? 0,
+      currentQuestionIndex: quizRow.current_question_index ?? 0,
 
       showQuestionToPlayers: quizRow.show_question_to_players,
       config: {
@@ -110,17 +114,17 @@ const [players, setPlayers] = useState<Player[]>([]);
       })),
     });
 
-   // setPlayers(playerRows ?? []);
-   setPlayers(
-  (playerRows ?? []).map(p => ({
-    id: p.player_id,
-    name: p.player_name,
-    score: p.score,
-    avatar: p.avatar ?? '/default-avatar.png',
-    clan: p.clan ?? null,
-    answers: [], // 🔥 REQUIRED
-  }))
-);
+    // setPlayers(playerRows ?? []);
+    setPlayers(
+      (playerRows ?? []).map(p => ({
+        id: p.player_id,
+        name: p.player_name,
+        score: p.score,
+        avatar: p.avatar ?? '/default-avatar.png',
+        clan: p.clan ?? null,
+        answers: [], // 🔥 REQUIRED
+      }))
+    );
 
     setLoading(false);
   };
@@ -152,7 +156,7 @@ const [players, setPlayers] = useState<Player[]>([]);
               ...prev,
               gameState: row.game_state,
               currentQuestionIndex:
-  row.current_question_index ?? prev.currentQuestionIndex,
+                row.current_question_index ?? prev.currentQuestionIndex,
               showQuestionToPlayers: row.show_question_to_players,
 
               // ✅ GUARANTEE CONFIG NEVER DISAPPEARS
@@ -223,30 +227,30 @@ const [players, setPlayers] = useState<Player[]>([]);
           filter: `quiz_id=eq.${quizId}`,
         },
         payload => {
-         // const newPlayer = payload.new as QuizPlayer;
-         //const newPlayer = payload.new;
-         const newPlayer = payload.new as QuizPlayer;
+          // const newPlayer = payload.new as QuizPlayer;
+          //const newPlayer = payload.new;
+          const newPlayer = payload.new as QuizPlayer;
 
 
 
-        setPlayers(prev => {
-  const updated = [...prev];
-  const idx = updated.findIndex(p => p.id === newPlayer.player_id);
+          setPlayers(prev => {
+            const updated = [...prev];
+            const idx = updated.findIndex(p => p.id === newPlayer.player_id);
 
-  const mappedPlayer = {
-    id: newPlayer.player_id,
-    name: newPlayer.player_name,
-    score: newPlayer.score,
-    avatar: newPlayer.avatar ?? '/default-avatar.png',
-    clan: newPlayer.clan ?? null,
-    answers: prev[idx]?.answers ?? [],
-  };
+            const mappedPlayer = {
+              id: newPlayer.player_id,
+              name: newPlayer.player_name,
+              score: newPlayer.score,
+              avatar: newPlayer.avatar ?? '/default-avatar.png',
+              clan: newPlayer.clan ?? null,
+              answers: prev[idx]?.answers ?? [],
+            };
 
-  if (idx >= 0) updated[idx] = mappedPlayer;
-  else updated.push(mappedPlayer);
+            if (idx >= 0) updated[idx] = mappedPlayer;
+            else updated.push(mappedPlayer);
 
-  return updated.sort((a, b) => b.score - a.score);
-});
+            return updated.sort((a, b) => b.score - a.score);
+          });
 
         }
       )
@@ -264,27 +268,27 @@ const [players, setPlayers] = useState<Player[]>([]);
         .eq('quiz_id', quizId)
         .order('score', { ascending: false })
         .then(({ data }) => {
-         // if (data) setPlayers(data);
-         if (data) {
-  setPlayers(
-    data.map(p => ({
-      id: p.player_id,
-      name: p.player_name,
-      score: p.score,
-      avatar: p.avatar ?? '/default-avatar.png',
-      clan: p.clan ?? null,
-      answers: [],
-    }))
-  );
-}
+          // if (data) setPlayers(data);
+          if (data) {
+            setPlayers(
+              data.map(p => ({
+                id: p.player_id,
+                name: p.player_name,
+                score: p.score,
+                avatar: p.avatar ?? '/default-avatar.png',
+                clan: p.clan ?? null,
+                answers: [],
+              }))
+            );
+          }
 
         });
     }
   }, [quiz?.gameState, quizId]);
   /* ---------------------- DEBUG: HOST PLAYERS ---------------------- */
-useEffect(() => {
-  console.log('HOST LEADERBOARD PLAYERS', players);
-}, [players]);
+  useEffect(() => {
+    console.log('HOST LEADERBOARD PLAYERS', players);
+  }, [players]);
 
 
   /* --------------------------- DERIVED VALUES --------------------------- */
@@ -361,8 +365,50 @@ useEffect(() => {
     setAnswers(latestAnswers || []);
   };
 
+  // const updateGameState = async (next: GameState) => {
+  //   if (!quizId || !quiz) return;
+
+  //   let nextIndex = quiz.currentQuestionIndex;
+
+  //   if (
+  //     next === GameState.QUESTION_ACTIVE &&
+  //     quiz.gameState === GameState.LEADERBOARD
+  //   ) {
+  //     nextIndex += 1;
+  //   }
+
+  //   if (next === GameState.QUESTION_RESULT) {
+  //     await fetchLatestAnswers(); // Fetch latest answers when showing results
+  //   }
+
+  //   setQuiz((prev: any) => ({
+  //     ...prev,
+  //     gameState: next,
+  //    // currentIndex: nextIndex,
+  //    currentQuestionIndex: nextIndex,
+
+
+  //     // 🔥 FORCE CONFIG TO ALWAYS EXIST
+  //     config: prev?.config ?? {
+  //       clanBased: false,
+  //       clanNames: {},
+  //       clanAssignment: null,
+  //     },
+  //   }));
+
+
+  //   await supabase
+  //     .from('quiz_master_structure')
+  //     .update({
+  //       game_state: next,
+  //       current_question_index: nextIndex,
+  //       show_question_to_players:
+  //         next === GameState.QUESTION_ACTIVE,
+  //     })
+  //     .eq('quiz_id', quizId);
+  // };
   const updateGameState = async (next: GameState) => {
-    if (!quizId || !quiz) return;
+    if (!quizId) return;
 
     let nextIndex = quiz.currentQuestionIndex;
 
@@ -370,38 +416,27 @@ useEffect(() => {
       next === GameState.QUESTION_ACTIVE &&
       quiz.gameState === GameState.LEADERBOARD
     ) {
-      nextIndex += 1;
+      nextIndex += 1; // 🔥 moves to next question
     }
 
-    if (next === GameState.QUESTION_RESULT) {
-      await fetchLatestAnswers(); // Fetch latest answers when showing results
-    }
-
-    setQuiz((prev: any) => ({
+    setQuiz(prev => ({
       ...prev,
       gameState: next,
-     // currentIndex: nextIndex,
-     currentQuestionIndex: nextIndex,
-
-
-      // 🔥 FORCE CONFIG TO ALWAYS EXIST
-      config: prev?.config ?? {
-        clanBased: false,
-        clanNames: {},
-        clanAssignment: null,
-      },
+      currentQuestionIndex: nextIndex,
     }));
-
 
     await supabase
       .from('quiz_master_structure')
       .update({
         game_state: next,
         current_question_index: nextIndex,
-        show_question_to_players:
-          next === GameState.QUESTION_ACTIVE,
+        show_question_to_players: next === GameState.QUESTION_ACTIVE,
       })
       .eq('quiz_id', quizId);
+if (next === GameState.FINISHED) {
+    navigate(`/leaderboard/${quizId}`);
+  }
+      
   };
 
   /* ------------------------------- GUARDS ------------------------------- */
@@ -418,6 +453,9 @@ useEffect(() => {
       {quiz.gameState === GameState.QUESTION_ACTIVE && question && (
         <div className="w-full max-w-3xl mb-8">
           <h2 className="text-xl font-bold mb-4 text-center">
+            <p className="text-sm text-gray-500 mb-2">
+              Question {quiz.currentQuestionIndex + 1} of {quiz.questions.length}
+            </p>
             {question.text}
           </h2>
 
@@ -452,7 +490,7 @@ useEffect(() => {
       {quiz.gameState === GameState.LEADERBOARD && (
         <IntermediateLeaderboard players={players} quiz={quiz} />
       )}
-    {/* {quiz.gameState === GameState.LEADERBOARD && (
+      {/* {quiz.gameState === GameState.LEADERBOARD && (
   <div className="w-full max-w-xl bg-white rounded-lg p-6 shadow">
     <h2 className="text-2xl font-bold mb-4 text-center">🏆 Leaderboard</h2>
 
@@ -478,14 +516,26 @@ useEffect(() => {
           </Button>
         )}
 
-        {quiz.gameState === GameState.QUESTION_RESULT && (
+        {/* NORMAL LEADERBOARD */}
+        {quiz.gameState === GameState.QUESTION_RESULT && !isLastQuestion && (
           <Button
             onClick={() => updateGameState(GameState.LEADERBOARD)}
             className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-bold"
           >
-            {isLastQuestion ? 'Final Leaderboard' : 'Show Leaderboard'}
+            Show Leaderboard
           </Button>
         )}
+
+        {/* FINAL LEADERBOARD */}
+        {quiz.gameState === GameState.QUESTION_RESULT && isLastQuestion && (
+          <Button
+            onClick={() => updateGameState(GameState.FINISHED)}
+            className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-lg font-bold"
+          >
+            Show Final Leaderboard
+          </Button>
+        )}
+
 
 
         {quiz.gameState === GameState.LEADERBOARD && !isLastQuestion && (

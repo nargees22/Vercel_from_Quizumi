@@ -19,7 +19,7 @@ interface QuestionRow {
 interface Quiz {
   quiz_id: string;
   game_state: GameState;
-  current_question_index: number | null;
+  currentQuestionIndex: number;
   show_question_to_players: boolean;
 }
 interface QuizPlayerRow {
@@ -153,10 +153,13 @@ const joinQuiz = async () => {
         async (payload) => {
           const updatedQuiz = payload.new as Quiz; // Explicitly cast to Quiz type
           if (updatedQuiz) {
-            setQuiz((prevQuiz) => ({
-              ...prevQuiz,
-              ...updatedQuiz,
-            }));
+            setQuiz(prev => ({
+  ...prev,
+  game_state: updatedQuiz.game_state,
+  currentQuestionIndex:
+    updatedQuiz.currentQuestionIndex ?? prev?.currentQuestionIndex ?? 0,
+  show_question_to_players: updatedQuiz.show_question_to_players,
+}));
 
             // Fetch updated questions dynamically
             const { data: updatedQuestions } = await supabase
@@ -246,6 +249,13 @@ useEffect(() => {
     questionStartRef.current = Date.now();
   }, [quiz?.current_question_index]);
  
+useEffect(() => {
+  console.log('QUIZ SYNC', {
+    gameState: quiz.gameState,
+    index: quiz.currentQuestionIndex,
+    question: quiz.questions?.[quiz.currentQuestionIndex]?.text,
+  });
+}, [quiz]);
 
 
 
@@ -255,13 +265,19 @@ useEffect(() => {
   if (!quizId) return <PageLoader message="Invalid quiz" />;
   if (loading) return <PageLoader message="Joining quiz..." />;
   if (!quiz) return <PageLoader message="Waiting for host..." />;
+  // --------------------------------------------------
+// DERIVED QUESTION (🔥 SINGLE SOURCE OF TRUTH)
+// --------------------------------------------------
+const question =
+  questions?.[quiz?.currentQuestionIndex ?? -1] ?? null;
 
-  const question =
-    typeof quiz.current_question_index === 'number' &&
-      quiz.current_question_index >= 0 &&
-      quiz.current_question_index < questions.length
-      ? questions[quiz.current_question_index]
-      : null;
+
+  // const question =
+  //   typeof quiz.current_question_index === 'number' &&
+  //     quiz.current_question_index >= 0 &&
+  //     quiz.current_question_index < questions.length
+  //     ? questions[quiz.current_question_index]
+  //     : null;
 
   // --------------------------------------------------
   // LOBBY
