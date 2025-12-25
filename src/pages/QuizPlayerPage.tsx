@@ -112,12 +112,15 @@ const QuizPlayerPage = () => {
 const joinQuiz = async () => {
   await supabase
     .from('quiz_players')
-    .insert({
+    .upsert(
+    {
       quiz_id: quizId,
       player_id: playerId,
       player_name: `Player-${playerId.slice(0, 4)}`,
       score: 0,
-    });
+    },
+    { onConflict: 'quiz_id,player_id' }
+  );
 
   fetchPlayers(); // optional refresh
 };
@@ -233,6 +236,12 @@ useEffect(() => {
     // ⏱ start timing for this question
     questionStartRef.current = Date.now();
   }, [quiz?.current_question_index]);
+  useEffect(() => {
+  if (quiz?.game_state === GameState.LEADERBOARD) {
+    fetchPlayers();
+  }
+}, [quiz?.game_state]);
+
 
 
   // --------------------------------------------------
