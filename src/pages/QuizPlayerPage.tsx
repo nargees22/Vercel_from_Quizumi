@@ -31,7 +31,14 @@ interface QuizPlayerRow {
 
 
 const QuizPlayerPage = () => {
-  const { quizId } = useParams<{ quizId: string }>();
+  //const { quizId } = useParams<{ quizId: string }>();
+  const { quizId, playerId } = useParams<{
+  quizId: string;
+  playerId: string;
+}>();
+console.log('PLAYER FROM URL', { quizId, playerId });
+
+
   const navigate = useNavigate();
 
   const [quiz, setQuiz] = useState<Quiz | null>(null);
@@ -45,14 +52,14 @@ const QuizPlayerPage = () => {
   // --------------------------------------------------
   // STABLE PLAYER ID (persists on refresh)
   // --------------------------------------------------
-  const playerId = useMemo(() => {
-    let id = localStorage.getItem('player_id');
-    if (!id) {
-      id = crypto.randomUUID();
-      localStorage.setItem('player_id', id);
-    }
-    return id;
-  }, []);
+  // const playerId = useMemo(() => {
+  //   let id = localStorage.getItem('player_id');
+  //   if (!id) {
+  //     id = crypto.randomUUID();
+  //     localStorage.setItem('player_id', id);
+  //   }
+  //   return id;
+  // }, []);
   console.log('PLAYER ID FROM URL:', playerId);
 
   const fetchPlayers = async () => {
@@ -117,7 +124,7 @@ const joinQuiz = async () => {
     .upsert(
     {
       quiz_id: quizId,
-      player_id: playerId,
+      player_id: playerId!,
       player_name: `Player-${playerId.slice(0, 4)}`,
       score: 0,
     },
@@ -318,7 +325,7 @@ useEffect(() => {
       // 1️⃣ Save answer
       await supabase.from('quiz_answers').insert({
         quiz_id: quizId,
-        player_id: playerId,
+        player_id: playerId!,
        question_id: question.pk_id, // ✅ NUMBER
   // answer: index,      
   answer: {
@@ -327,10 +334,15 @@ useEffect(() => {
         time_taken: timeTaken,
         score,
       });
+console.log('SCORING PLAYER', {
+  quizId,
+  playerId,
+  score
+});
 
      await supabase.rpc('increment_player_score', {
   p_quiz_id: quizId,
-  p_player_id: playerId,
+  p_player_id: playerId!,
   p_score: score,
 });
 
