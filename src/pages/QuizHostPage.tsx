@@ -6,6 +6,7 @@ import TimerCircle from '../components/TimerCircle';
 import { IntermediateLeaderboard } from '../components/IntermediateLeaderboard';
 import Button from '../components/Button';
 import { GameState, QuestionType } from '../../types';
+  import type { Player } from '../../types';
 
 /* -------------------------------- TYPES -------------------------------- */
 
@@ -21,6 +22,8 @@ interface QuizPlayer {
   player_id: string;
   player_name: string;
   score: number;
+  avatar?: string | null;
+  clan?: string | null;
 }
 
 /* -------------------------------- COMPONENT -------------------------------- */
@@ -37,7 +40,11 @@ const QuizHostPage = () => {
     },
   });
 
-  const [players, setPlayers] = useState<QuizPlayer[]>([]);
+  //const [players, setPlayers] = useState<QuizPlayer[]>([]);
+
+
+const [players, setPlayers] = useState<Player[]>([]);
+
   const [answers, setAnswers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -101,7 +108,18 @@ const QuizHostPage = () => {
       })),
     });
 
-    setPlayers(playerRows ?? []);
+   // setPlayers(playerRows ?? []);
+   setPlayers(
+  (playerRows ?? []).map(p => ({
+    id: p.player_id,
+    name: p.player_name,
+    score: p.score,
+    avatar: p.avatar ?? '/default-avatar.png',
+    clan: p.clan ?? null,
+    answers: [], // 🔥 REQUIRED
+  }))
+);
+
     setLoading(false);
   };
 
@@ -203,19 +221,31 @@ const QuizHostPage = () => {
           filter: `quiz_id=eq.${quizId}`,
         },
         payload => {
-          const newPlayer = payload.new as QuizPlayer;
+         // const newPlayer = payload.new as QuizPlayer;
+         //const newPlayer = payload.new;
+         const newPlayer = payload.new as QuizPlayer;
 
-          setPlayers(prev => {
-            const updated = [...prev];
-            const idx = updated.findIndex(
-              p => p.player_id === newPlayer.player_id
-            );
 
-            if (idx >= 0) updated[idx] = newPlayer;
-            else updated.push(newPlayer);
 
-            return updated.sort((a, b) => b.score - a.score);
-          });
+        setPlayers(prev => {
+  const updated = [...prev];
+  const idx = updated.findIndex(p => p.id === newPlayer.player_id);
+
+  const mappedPlayer = {
+    id: newPlayer.player_id,
+    name: newPlayer.player_name,
+    score: newPlayer.score,
+    avatar: newPlayer.avatar ?? '/default-avatar.png',
+    clan: newPlayer.clan ?? null,
+    answers: prev[idx]?.answers ?? [],
+  };
+
+  if (idx >= 0) updated[idx] = mappedPlayer;
+  else updated.push(mappedPlayer);
+
+  return updated.sort((a, b) => b.score - a.score);
+});
+
         }
       )
       .subscribe();
@@ -232,7 +262,20 @@ const QuizHostPage = () => {
         .eq('quiz_id', quizId)
         .order('score', { ascending: false })
         .then(({ data }) => {
-          if (data) setPlayers(data);
+         // if (data) setPlayers(data);
+         if (data) {
+  setPlayers(
+    data.map(p => ({
+      id: p.player_id,
+      name: p.player_name,
+      score: p.score,
+      avatar: p.avatar ?? '/default-avatar.png',
+      clan: p.clan ?? null,
+      answers: [],
+    }))
+  );
+}
+
         });
     }
   }, [quiz?.gameState, quizId]);
@@ -402,10 +445,10 @@ useEffect(() => {
         </div>
       )}
 
-      {/* {quiz.gameState === GameState.LEADERBOARD && (
+      {quiz.gameState === GameState.LEADERBOARD && (
         <IntermediateLeaderboard players={players} quiz={quiz} />
-      )} */}
-    {quiz.gameState === GameState.LEADERBOARD && (
+      )}
+    {/* {quiz.gameState === GameState.LEADERBOARD && (
   <div className="w-full max-w-xl bg-white rounded-lg p-6 shadow">
     <h2 className="text-2xl font-bold mb-4 text-center">🏆 Leaderboard</h2>
 
@@ -419,7 +462,7 @@ useEffect(() => {
       </div>
     ))}
   </div>
-)}
+)} */}
 
       <div className="mt-8 flex gap-4">
         {quiz.gameState === GameState.QUESTION_ACTIVE && (
