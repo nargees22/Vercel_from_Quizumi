@@ -128,12 +128,12 @@ const QuizHostPage = () => {
       showQuestionToPlayers: row.show_question_to_players,
 
       // ✅ GUARANTEE CONFIG NEVER DISAPPEARS
-      config: prev.config ?? {
-        clanBased: false,
-        titanName: null,
-        defenderName: null,
-        clanAssignment: null,
-      },
+      config: prev?.config ?? {
+  clanBased: false,
+  clanNames: {},
+  clanAssignment: null,
+},
+
     };
   });
         }
@@ -315,11 +315,19 @@ useEffect(() => {
       await fetchLatestAnswers(); // Fetch latest answers when showing results
     }
 
-    setQuiz((prev: any) => ({
-      ...prev,
-      gameState: next,
-      currentIndex: nextIndex,
-    }));
+  setQuiz((prev: any) => ({
+  ...prev,
+  gameState: next,
+  currentIndex: nextIndex,
+
+  // 🔥 FORCE CONFIG TO ALWAYS EXIST
+  config: prev?.config ?? {
+    clanBased: false,
+    clanNames: {},
+    clanAssignment: null,
+  },
+}));
+
 
     await supabase
       .from('quiz_master_structure')
