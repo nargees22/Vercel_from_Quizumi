@@ -402,9 +402,24 @@ useEffect(() => {
         </div>
       )}
 
-      {quiz.gameState === GameState.LEADERBOARD && (
+      {/* {quiz.gameState === GameState.LEADERBOARD && (
         <IntermediateLeaderboard players={players} quiz={quiz} />
-      )}
+      )} */}
+    {quiz.gameState === GameState.LEADERBOARD && (
+  <div className="w-full max-w-xl bg-white rounded-lg p-6 shadow">
+    <h2 className="text-2xl font-bold mb-4 text-center">🏆 Leaderboard</h2>
+
+    {players.map((p, i) => (
+      <div
+        key={p.player_id}
+        className="flex justify-between p-3 border-b"
+      >
+        <span>#{i + 1} {p.player_name}</span>
+        <span className="font-bold">{p.score} pts</span>
+      </div>
+    ))}
+  </div>
+)}
 
       <div className="mt-8 flex gap-4">
         {quiz.gameState === GameState.QUESTION_ACTIVE && (
