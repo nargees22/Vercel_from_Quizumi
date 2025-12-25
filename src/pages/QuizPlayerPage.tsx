@@ -265,7 +265,10 @@ useEffect(() => {
         quiz_id: quizId,
         player_id: playerId,
        question_id: question.pk_id, // ✅ NUMBER
-  answer: index,      
+  // answer: index,      
+  answer: {
+    index: index,              // ✅ REQUIRED BY HOST
+  },
         time_taken: timeTaken,
         score,
       });
