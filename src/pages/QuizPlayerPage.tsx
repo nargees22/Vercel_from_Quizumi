@@ -22,6 +22,13 @@ interface Quiz {
   current_question_index: number | null;
   show_question_to_players: boolean;
 }
+interface QuizPlayerRow {
+  quiz_id: string;
+  player_id: string;
+  player_name: string;
+  score: number;
+}
+
 
 const QuizPlayerPage = () => {
   const { quizId } = useParams<{ quizId: string }>();
@@ -156,6 +163,47 @@ const joinQuiz = async () => {
 
     return () => supabase.removeChannel(channel);
   }, [quizId]);
+  // --------------------------------------------------
+// REALTIME LISTENER (PLAYER SCORES → PLAYER SCREEN)
+// --------------------------------------------------
+useEffect(() => {
+  if (!quizId) return;
+
+  const channel = supabase
+    .channel(`player-scores-${quizId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'quiz_players',
+        filter: `quiz_id=eq.${quizId}`,
+      },
+     payload => {
+  const newPlayer = payload.new as QuizPlayerRow;
+
+  setPlayers(prev => {
+    const updated = [...prev];
+    const idx = updated.findIndex(
+      p => p.player_id === newPlayer.player_id
+    );
+
+    if (idx >= 0) {
+      updated[idx] = newPlayer;
+    } else {
+      updated.push(newPlayer);
+    }
+
+    return updated.sort((a, b) => b.score - a.score);
+  });
+}
+
+    )
+    .subscribe();
+
+  return () => supabase.removeChannel(channel);
+}, [quizId]);
+
 
 useEffect(() => {
   if (quiz?.game_state === GameState.QUESTION_ACTIVE) {
