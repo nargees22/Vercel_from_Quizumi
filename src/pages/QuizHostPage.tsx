@@ -321,7 +321,7 @@ useEffect(() => {
   }, [answers, question]);
   useEffect(() => {
     setAnswers([]);
-  }, [quiz?.currentIndex]);
+  }, [quiz?.currentQuestionIndex]);
 
 
   const isLastQuestion =
