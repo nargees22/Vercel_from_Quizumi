@@ -337,6 +337,12 @@ useEffect(() => {
         })
         .eq('quiz_id', quizId)
         .eq('player_id', playerId);
+        console.log({
+  selectedIndex: index,
+  correctIndex: question.correct_answer_index,
+  question
+});
+
     };
 
     return (
