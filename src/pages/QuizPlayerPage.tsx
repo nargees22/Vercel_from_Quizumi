@@ -236,11 +236,7 @@ useEffect(() => {
     // ⏱ start timing for this question
     questionStartRef.current = Date.now();
   }, [quiz?.current_question_index]);
-  useEffect(() => {
-  if (quiz?.game_state === GameState.LEADERBOARD) {
-    fetchPlayers();
-  }
-}, [quiz?.game_state]);
+ 
 
 
 
@@ -261,9 +257,9 @@ useEffect(() => {
   // --------------------------------------------------
   // LOBBY
   // --------------------------------------------------
-  if (quiz?.game_state === GameState.LOBBY) {
-    return <PageLoader message="Waiting for host to start the quiz..." />;
-  }
+  // if (quiz?.game_state === GameState.LOBBY) {
+  //   return <PageLoader message="Waiting for host to start the quiz..." />;
+  // }
   if (quiz.game_state === GameState.LOBBY) {
   return (
     <div className="flex flex-col items-center mt-20 gap-6">
