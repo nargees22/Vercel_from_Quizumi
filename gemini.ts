@@ -42,7 +42,8 @@ const schema = {
 export async function generateQuestions(topic: string, skill: string, count: number): Promise<Omit<Question, 'id'>[]> {
     // ✅ Create a new GoogleGenAI instance right before making an API call to ensure it always uses the most up-to-date API key.
     const ai = new GoogleGenAI({
-      apiKey: process.env.API_KEY,
+     apiKey: import.meta.env.VITE_GEMINI_API_KEY,
+
     });
 
     try {
