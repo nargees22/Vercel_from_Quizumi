@@ -150,8 +150,8 @@ const [players, setPlayers] = useState<Player[]>([]);
             return {
               ...prev,
               gameState: row.game_state,
-              currentIndex:
-                row.current_question_index ?? prev.currentIndex,
+              currentQuestionIndex:
+  row.current_question_index ?? prev.currentQuestionIndex,
               showQuestionToPlayers: row.show_question_to_players,
 
               // ✅ GUARANTEE CONFIG NEVER DISAPPEARS
@@ -291,9 +291,9 @@ useEffect(() => {
   const question =
     quiz &&
       quiz.questions &&
-      quiz.currentIndex >= 0 &&
-      quiz.currentIndex < quiz.questions.length
-      ? quiz.questions[quiz.currentIndex]
+      quiz.currentQuestionIndex >= 0 &&
+      quiz.currentQuestionIndex < quiz.questions.length
+      ? quiz.questions[quiz.currentQuestionIndex]
       : null;
 
   const answerCounts = useMemo(() => {
@@ -326,7 +326,7 @@ useEffect(() => {
 
   const isLastQuestion =
     quiz && quiz.questions
-      ? quiz.currentIndex === quiz.questions.length - 1
+      ? quiz.currentQuestionIndex === quiz.questions.length - 1
       : false;
 
   useEffect(() => {
@@ -363,7 +363,7 @@ useEffect(() => {
   const updateGameState = async (next: GameState) => {
     if (!quizId || !quiz) return;
 
-    let nextIndex = quiz.currentIndex;
+    let nextIndex = quiz.currentQuestionIndex;
 
     if (
       next === GameState.QUESTION_ACTIVE &&
@@ -429,7 +429,7 @@ useEffect(() => {
           <TimerCircle
             duration={question.timeLimit}
             quizId={quizId}
-            questionIndex={quiz.currentIndex}
+            questionIndex={quiz.currentQuestionIndex}
             onComplete={() => { }} // ❌ HOST should not auto-change state
           />
 
