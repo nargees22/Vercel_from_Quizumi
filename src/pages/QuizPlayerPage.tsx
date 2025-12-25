@@ -321,22 +321,12 @@ useEffect(() => {
         score,
       });
 
-      // 2️⃣ Update total player score
-      const { data: currentPlayer } = await supabase
-        .from('quiz_players')
-        .select('score')
-        .eq('quiz_id', quizId)
-        .eq('player_id', playerId)
-        .single();
+     await supabase.rpc('increment_player_score', {
+  p_quiz_id: quizId,
+  p_player_id: playerId,
+  p_score: score,
+});
 
-      // 2️⃣ Update score properly
-      await supabase
-        .from('quiz_players')
-        .update({
-          score: (currentPlayer?.score ?? 0) + score,
-        })
-        .eq('quiz_id', quizId)
-        .eq('player_id', playerId);
         console.log({
   selectedIndex: index,
   correctIndex: question.correct_answer_index,
