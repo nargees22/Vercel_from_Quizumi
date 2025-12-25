@@ -249,11 +249,19 @@ useEffect(() => {
     questionStartRef.current = Date.now();
   }, [quiz?.current_question_index]);
  
+// useEffect(() => {
+//   console.log('QUIZ SYNC', {
+//     gameState: quiz.gameState,
+//     index: quiz.currentQuestionIndex,
+//     question: quiz.questions?.[quiz.currentQuestionIndex]?.text,
+//   });
+// }, [quiz]);
 useEffect(() => {
+  if (!quiz) return;
+
   console.log('QUIZ SYNC', {
-    gameState: quiz.gameState,
+    gameState: quiz.game_state,
     index: quiz.currentQuestionIndex,
-    question: quiz.questions?.[quiz.currentQuestionIndex]?.text,
   });
 }, [quiz]);
 
@@ -262,9 +270,24 @@ useEffect(() => {
   // --------------------------------------------------
   // GUARDS
   // --------------------------------------------------
-  if (!quizId) return <PageLoader message="Invalid quiz" />;
-  if (loading) return <PageLoader message="Joining quiz..." />;
-  if (!quiz) return <PageLoader message="Waiting for host..." />;
+  // if (!quizId) return <PageLoader message="Invalid quiz" />;
+  // if (loading) return <PageLoader message="Joining quiz..." />;
+  // if (!quiz) return <PageLoader message="Waiting for host..." />;
+  // --------------------------------------------------
+// GUARDS  ✅ MUST COME BEFORE ANY quiz.game_state usage
+// --------------------------------------------------
+if (!quizId) {
+  return <PageLoader message="Invalid quiz" />;
+}
+
+if (!quiz) {
+  return <PageLoader message="Waiting for quiz to start..." />;
+}
+
+if (loading) {
+  return <PageLoader message="Joining quiz..." />;
+}
+
   // --------------------------------------------------
 // DERIVED QUESTION (🔥 SINGLE SOURCE OF TRUTH)
 // --------------------------------------------------
