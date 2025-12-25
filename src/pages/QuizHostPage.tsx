@@ -236,6 +236,11 @@ const QuizHostPage = () => {
         });
     }
   }, [quiz?.gameState, quizId]);
+  /* ---------------------- DEBUG: HOST PLAYERS ---------------------- */
+useEffect(() => {
+  console.log('HOST LEADERBOARD PLAYERS', players);
+}, [players]);
+
 
   /* --------------------------- DERIVED VALUES --------------------------- */
 
