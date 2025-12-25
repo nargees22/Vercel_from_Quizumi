@@ -129,16 +129,17 @@ const LobbyPage = () => {
   };
 
   const handleStartQuiz = async () => {
-    const nextState = quiz.config.clanBased
-      ? GameState.CLAN_BATTLE_VS
-      : GameState.QUESTION_INTRO;
+    const nextState = quiz?.config?.clanBased === true
+  ? GameState.CLAN_BATTLE_VS
+  : GameState.QUESTION_INTRO;
+
 
     const { error } = await supabase
       .from('quiz_master_structure')
-      .update({
-    game_state: 'QUESTION_ACTIVE',
-    show_question_to_players: true,
-  })
+   .update({
+  game_state: nextState,
+  show_question_to_players: true,
+})
       .eq('quiz_id', quizId);
 
     if (!error) {

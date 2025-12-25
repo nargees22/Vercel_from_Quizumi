@@ -33,12 +33,13 @@ export const IntermediateLeaderboard: React.FC<{
     useEffect(() => {
         if (!quiz || players.length === 0) return;
 
-        const question = quiz.questions[quiz.currentQuestionIndex];
+       const question = quiz.questions?.[quiz.currentQuestionIndex];
+
         if (!question) return;
 
         const isFirstQuestionLeaderboard = quiz.currentQuestionIndex === 0;
 
-        if (quiz.config.clanBased) {
+       if (quiz.config?.clanBased === true) {
             const activeClans = Array.from(new Set(players.map(p => p.clan).filter(Boolean))) as Clan[];
 
             const clanStats: Record<string, { totalScore: number; playerCount: number; prevTotalScore: number }> = {};
