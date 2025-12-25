@@ -33,6 +33,7 @@ const QuizHostPage = () => {
 
   //const [quiz, setQuiz] = useState<any>(null);
   const [quiz, setQuiz] = useState<any>({
+    currentQuestionIndex: 0,
     config: {
       clanBased: false,
       clanNames: {},
@@ -379,7 +380,9 @@ useEffect(() => {
     setQuiz((prev: any) => ({
       ...prev,
       gameState: next,
-      currentIndex: nextIndex,
+     // currentIndex: nextIndex,
+     currentQuestionIndex: nextIndex,
+
 
       // 🔥 FORCE CONFIG TO ALWAYS EXIST
       config: prev?.config ?? {
