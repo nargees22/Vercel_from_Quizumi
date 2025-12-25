@@ -487,9 +487,15 @@ if (next === GameState.FINISHED) {
         </div>
       )}
 
-      {quiz.gameState === GameState.LEADERBOARD && (
+      {/* {quiz.gameState === GameState.LEADERBOARD && (
         <IntermediateLeaderboard players={players} quiz={quiz} />
-      )}
+      )} */}
+{quiz.gameState === GameState.LEADERBOARD && !isLastQuestion && (
+  <IntermediateLeaderboard players={players} quiz={quiz} />
+)}
+
+
+
       {/* {quiz.gameState === GameState.LEADERBOARD && (
   <div className="w-full max-w-xl bg-white rounded-lg p-6 shadow">
     <h2 className="text-2xl font-bold mb-4 text-center">🏆 Leaderboard</h2>

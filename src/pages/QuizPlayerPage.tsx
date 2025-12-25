@@ -84,36 +84,65 @@ console.log('PLAYER FROM URL', { quizId, playerId });
   // --------------------------------------------------
   // FETCH QUIZ + QUESTIONS
   // --------------------------------------------------
+  // const fetchData = async () => {
+  //   if (!quizId) return;
+
+  //   setLoading(true);
+
+  //   const [{ data: quizData }, { data: questionData }] = await Promise.all([
+  //     supabase
+  //       .from('quiz_master_structure')
+  //       .select('*')
+  //       .eq('quiz_id', quizId)
+  //       .single(),
+
+  //     supabase
+  //       .from('quiz_questions')
+  //       .select('*')
+  //       .eq('quiz_id', quizId)
+  //       .order('question_order'),
+  //   ]);
+
+  //   if (quizData) {
+  //     setQuiz(quizData);
+
+  //     // ✅ REGISTER PLAYER (UPSERT SAFE)
+
+  //   }
+
+  //   if (questionData) setQuestions(questionData);
+
+  //   setLoading(false);
+  // };
   const fetchData = async () => {
-    if (!quizId) return;
+  if (!quizId) return;
 
-    setLoading(true);
+  const [{ data: quizData }, { data: questionData }] = await Promise.all([
+    supabase
+      .from('quiz_master_structure')
+      .select('*')
+      .eq('quiz_id', quizId)
+      .single(),
 
-    const [{ data: quizData }, { data: questionData }] = await Promise.all([
-      supabase
-        .from('quiz_master_structure')
-        .select('*')
-        .eq('quiz_id', quizId)
-        .single(),
+    supabase
+      .from('quiz_questions')
+      .select('*')
+      .eq('quiz_id', quizId)
+      .order('question_order'),
+  ]);
 
-      supabase
-        .from('quiz_questions')
-        .select('*')
-        .eq('quiz_id', quizId)
-        .order('question_order'),
-    ]);
+  if (quizData) {
+    setQuiz(quizData);
+  }
 
-    if (quizData) {
-      setQuiz(quizData);
+  if (questionData) {
+    setQuestions(questionData);
+  }
 
-      // ✅ REGISTER PLAYER (UPSERT SAFE)
+  // ✅ CRITICAL
+  setLoading(false);
+};
 
-    }
-
-    if (questionData) setQuestions(questionData);
-
-    setLoading(false);
-  };
   useEffect(() => {
     fetchData();
   }, [quizId]);
@@ -137,57 +166,95 @@ const joinQuiz = async () => {
   // --------------------------------------------------
   // REALTIME LISTENER (HOST → PLAYER SYNC)
   // --------------------------------------------------
-  useEffect(() => {
-    if (!quizId) return;
 
-    const channel = supabase
-      .channel(`player-quiz-${quizId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'quiz_master_structure',
-          filter: `quiz_id=eq.${quizId}`,
-        },
-        async (payload) => {
-          const updatedQuiz = payload.new as Quiz; // Explicitly cast to Quiz type
-          if (updatedQuiz) {
-//             setQuiz(prev => ({
-//   ...prev,
+useEffect(() => {
+  if (!quizId) return;
+
+  const channel = supabase
+    .channel(`player-quiz-${quizId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'quiz_master_structure',
+        filter: `quiz_id=eq.${quizId}`,
+      },
+      async (payload) => {
+        const updatedQuiz = payload.new as Quiz;
+
+        if (!updatedQuiz) return;
+
+        // ✅ REPLACE setQuiz HERE
+        setQuiz({
+  quiz_id: updatedQuiz.quiz_id,
+  game_state: updatedQuiz.game_state,
+  current_question_index: updatedQuiz.current_question_index ?? 0,
+  show_question_to_players: updatedQuiz.show_question_to_players,
+});
+
+      }
+    )
+    .subscribe();
+
+  return () => supabase.removeChannel(channel);
+}, [quizId]);
+
+
+
+
+
+//   useEffect(() => {
+//     if (!quizId) return;
+
+//     const channel = supabase
+//       .channel(`player-quiz-${quizId}`)
+//       .on(
+//         'postgres_changes',
+//         {
+//           event: '*',
+//           schema: 'public',
+//           table: 'quiz_master_structure',
+//           filter: `quiz_id=eq.${quizId}`,
+//         },
+//         async (payload) => {
+//           const updatedQuiz = payload.new as Quiz; // Explicitly cast to Quiz type
+//           if (updatedQuiz) {
+// //             setQuiz(prev => ({
+// //   ...prev,
+// //   game_state: updatedQuiz.game_state,
+// //   currentQuestionIndex:
+// //     updatedQuiz.currentQuestionIndex ?? prev?.currentQuestionIndex ?? 0,
+// //   show_question_to_players: updatedQuiz.show_question_to_players,
+// // }));
+// setQuiz(prev => ({
+//   ...(prev ?? updatedQuiz),
 //   game_state: updatedQuiz.game_state,
-//   currentQuestionIndex:
-//     updatedQuiz.currentQuestionIndex ?? prev?.currentQuestionIndex ?? 0,
+//   current_question_index:
+//     updatedQuiz.current_question_index ??
+//     prev?.current_question_index ??
+//     0,
 //   show_question_to_players: updatedQuiz.show_question_to_players,
 // }));
-setQuiz(prev => ({
-  ...(prev ?? updatedQuiz),
-  game_state: updatedQuiz.game_state,
-  current_question_index:
-    updatedQuiz.current_question_index ??
-    prev?.current_question_index ??
-    0,
-  show_question_to_players: updatedQuiz.show_question_to_players,
-}));
 
 
-            // Fetch updated questions dynamically
-            const { data: updatedQuestions } = await supabase
-              .from('quiz_questions')
-              .select('*')
-              .eq('quiz_id', quizId)
-              .order('question_order');
+//             // Fetch updated questions dynamically
+//             const { data: updatedQuestions } = await supabase
+//               .from('quiz_questions')
+//               .select('*')
+//               .eq('quiz_id', quizId)
+//               .order('question_order');
 
-            if (updatedQuestions) {
-              setQuestions(updatedQuestions);
-            }
-          }
-        }
-      )
-      .subscribe();
+//             if (updatedQuestions) {
+//               setQuestions(updatedQuestions);
+//             }
+//           }
+//         }
+//       )
+//       .subscribe();
 
-    return () => supabase.removeChannel(channel);
-  }, [quizId]);
+//     return () => supabase.removeChannel(channel);
+//   }, [quizId]);
   // --------------------------------------------------
 // REALTIME LISTENER (PLAYER SCORES → PLAYER SCREEN)
 // --------------------------------------------------
@@ -230,11 +297,11 @@ useEffect(() => {
 }, [quizId]);
 
 
-useEffect(() => {
-  if (quiz?.game_state === GameState.QUESTION_ACTIVE) {
-    setLoading(false); // Ensure loading state is updated when the quiz becomes active
-  }
-}, [quiz?.game_state]);
+// useEffect(() => {
+//   if (quiz?.game_state === GameState.QUESTION_ACTIVE) {
+//     setLoading(false); // Ensure loading state is updated when the quiz becomes active
+//   }
+// }, [quiz?.game_state]);
 
 // useEffect(() => {
 //   if (quiz?.game_state === GameState.QUESTION_ACTIVE && quizId) {
@@ -271,7 +338,7 @@ useEffect(() => {
 
   console.log('QUIZ SYNC', {
     gameState: quiz.game_state,
-    index: quiz.currentQuestionIndex,
+     index: quiz.current_question_index,
   });
 }, [quiz]);
 
