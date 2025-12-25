@@ -223,17 +223,17 @@ useEffect(() => {
   }
 }, [quiz?.game_state]);
 
-useEffect(() => {
-  if (quiz?.game_state === GameState.QUESTION_ACTIVE && quizId) {
-    const playerId = localStorage.getItem('player_id');
-    if (playerId) {
-      const newUrl = `/quiz/player/${quizId}/${playerId}`;
-      if (window.location.hash !== `#${newUrl}`) {
-        navigate(newUrl); // Navigate only if the URL is different
-      }
-    }
-  }
-}, [quiz?.game_state, quizId, navigate]);
+// useEffect(() => {
+//   if (quiz?.game_state === GameState.QUESTION_ACTIVE && quizId) {
+//     const playerId = localStorage.getItem('player_id');
+//     if (playerId) {
+//       const newUrl = `/quiz/player/${quizId}/${playerId}`;
+//       if (window.location.hash !== `#${newUrl}`) {
+//         navigate(newUrl); // Navigate only if the URL is different
+//       }
+//     }
+//   }
+// }, [quiz?.game_state, quizId, navigate]);
 
   // --------------------------------------------------
   // RESET UI ON QUESTION CHANGE
@@ -345,6 +345,7 @@ console.log('SCORING PLAYER', {
   p_player_id: playerId!,
   p_score: score,
 });
+await fetchPlayers();
 
         console.log({
   selectedIndex: index,
