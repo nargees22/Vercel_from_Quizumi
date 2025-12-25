@@ -28,7 +28,15 @@ interface QuizPlayer {
 const QuizHostPage = () => {
   const { quizId } = useParams<{ quizId: string }>();
 
-  const [quiz, setQuiz] = useState<any>(null);
+  //const [quiz, setQuiz] = useState<any>(null);
+  const [quiz, setQuiz] = useState<any>({
+  config: {
+    clanBased: false,
+    clanNames: {},
+    clanAssignment: null,
+  },
+});
+
   const [players, setPlayers] = useState<QuizPlayer[]>([]);
   const [answers, setAnswers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);

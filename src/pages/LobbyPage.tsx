@@ -129,25 +129,22 @@ const LobbyPage = () => {
   };
 
   const handleStartQuiz = async () => {
-    const nextState = quiz?.config?.clanBased === true
-  ? GameState.CLAN_BATTLE_VS
-  : GameState.QUESTION_INTRO;
+  const { error } = await supabase
+    .from('quiz_master_structure')
+    .update({
+      game_state: GameState.QUESTION_ACTIVE,
+      show_question_to_players: true,
+      current_question_index: 0,
+    })
+    .eq('quiz_id', quizId);
 
+  if (!error) {
+    navigate(`/quiz/host/${quizId}`);
+  } else {
+    console.error('Failed to start quiz:', error);
+  }
+};
 
-    const { error } = await supabase
-      .from('quiz_master_structure')
-   .update({
-  game_state: nextState,
-  show_question_to_players: true,
-})
-      .eq('quiz_id', quizId);
-
-    if (!error) {
-      navigate(`/quiz/host/${quizId}`);
-    } else {
-      console.error('Failed to start quiz:', error);
-    }
-  };
 
   /* -------------------- UI -------------------- */
   return (
