@@ -53,6 +53,8 @@ const QuizPlayerPage = () => {
     }
     return id;
   }, []);
+  console.log('PLAYER ID FROM URL:', playerId);
+
   const fetchPlayers = async () => {
     if (!quizId) return;
 
