@@ -27,7 +27,9 @@ Deno.serve(async (req) => {
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+  const model = genAI.getGenerativeModel({
+  model: "gemini-1.5-flash",
+})
 
     const result = await model.generateContent(
       `Generate ${count} ${skill} level MCQ questions on ${topic}.
