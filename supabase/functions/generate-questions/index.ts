@@ -7,21 +7,14 @@ const corsHeaders = {
 };
 
 Deno.serve(async (req) => {
-  // ✅ Handle CORS preflight
   if (req.method === "OPTIONS") {
-    return new Response(null, {
-      status: 204,
-      headers: corsHeaders,
-    });
+    return new Response(null, { status: 204, headers: corsHeaders });
   }
 
   if (req.method !== "POST") {
     return new Response(
       JSON.stringify({ error: "Only POST allowed" }),
-      {
-        status: 405,
-        headers: corsHeaders,
-      }
+      { status: 405, headers: corsHeaders }
     );
   }
 
@@ -30,19 +23,11 @@ Deno.serve(async (req) => {
 
     const apiKey = Deno.env.get("GEMINI_API_KEY");
     if (!apiKey) {
-      return new Response(
-        JSON.stringify({ error: "Missing GEMINI_API_KEY" }),
-        {
-          status: 500,
-          headers: corsHeaders,
-        }
-      );
+      throw new Error("Missing GEMINI_API_KEY");
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({
-     model: "gemini-pro",
-    });
+    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
     const result = await model.generateContent(
       `Generate ${count} ${skill} level MCQ questions on ${topic}.
@@ -60,13 +45,10 @@ Deno.serve(async (req) => {
       }
     );
   } catch (err) {
-    console.error(err);
+    console.error("Gemini error:", err);
     return new Response(
-      JSON.stringify({ error: "Gemini failed" }),
-      {
-        status: 500,
-        headers: corsHeaders,
-      }
+      JSON.stringify({ error: String(err) }),
+      { status: 500, headers: corsHeaders }
     );
   }
 });

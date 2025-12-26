@@ -100,7 +100,6 @@
 
 
 console.log("ENV CHECK:", import.meta.env.VITE_SUPABASE_FUNCTION_URL);
-
 const FUNCTION_URL = import.meta.env.VITE_SUPABASE_FUNCTION_URL;
 
 export async function generateQuestions(
@@ -108,6 +107,8 @@ export async function generateQuestions(
   skill: string,
   count: number
 ) {
+  console.log("ENV CHECK:", FUNCTION_URL);
+
   if (!FUNCTION_URL) {
     throw new Error("Missing VITE_SUPABASE_FUNCTION_URL");
   }
@@ -121,8 +122,7 @@ export async function generateQuestions(
   });
 
   if (!res.ok) {
-    const text = await res.text();
-    throw new Error(text);
+    throw new Error(await res.text());
   }
 
   return res.json();
