@@ -1,10 +1,28 @@
 import { GoogleGenerativeAI } from "npm:@google/generative-ai";
 
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
 Deno.serve(async (req) => {
-  if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Only POST allowed" }), {
-      status: 405,
+  // ✅ Handle CORS preflight
+  if (req.method === "OPTIONS") {
+    return new Response(null, {
+      status: 204,
+      headers: corsHeaders,
     });
+  }
+
+  if (req.method !== "POST") {
+    return new Response(
+      JSON.stringify({ error: "Only POST allowed" }),
+      {
+        status: 405,
+        headers: corsHeaders,
+      }
+    );
   }
 
   try {
@@ -14,12 +32,17 @@ Deno.serve(async (req) => {
     if (!apiKey) {
       return new Response(
         JSON.stringify({ error: "Missing GEMINI_API_KEY" }),
-        { status: 500 }
+        {
+          status: 500,
+          headers: corsHeaders,
+        }
       );
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+    const model = genAI.getGenerativeModel({
+      model: "gemini-1.5-pro",
+    });
 
     const result = await model.generateContent(
       `Generate ${count} ${skill} level MCQ questions on ${topic}.
@@ -29,11 +52,21 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify({ result: result.response.text() }),
-      { headers: { "Content-Type": "application/json" } }
+      {
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
+      }
     );
   } catch (err) {
-    return new Response(JSON.stringify({ error: "Gemini failed" }), {
-      status: 500,
-    });
+    console.error(err);
+    return new Response(
+      JSON.stringify({ error: "Gemini failed" }),
+      {
+        status: 500,
+        headers: corsHeaders,
+      }
+    );
   }
 });
