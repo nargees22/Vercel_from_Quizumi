@@ -100,30 +100,13 @@
 
 
 console.log("ENV CHECK:", import.meta.env.VITE_SUPABASE_FUNCTION_URL);
-const FUNCTION_URL = import.meta.env.VITE_SUPABASE_FUNCTION_URL;
-
-export async function generateQuestions(
-  topic: string,
-  skill: string,
-  count: number
-) {
-  console.log("ENV CHECK:", FUNCTION_URL);
-
-  if (!FUNCTION_URL) {
-    throw new Error("Missing VITE_SUPABASE_FUNCTION_URL");
-  }
-
-  const res = await fetch(`${FUNCTION_URL}/generate-questions`, {
+export async function generateQuestions(topic: string, skill: string, count: number) {
+  const res = await fetch("/api/generate-questions", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ topic, skill, count }),
   });
 
-  if (!res.ok) {
-    throw new Error(await res.text());
-  }
-
+  if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
