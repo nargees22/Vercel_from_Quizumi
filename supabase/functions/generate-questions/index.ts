@@ -28,8 +28,8 @@ Deno.serve(async (req) => {
 
     const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({
-  model: "gemini-1.5-flash",
-})
+      model: "models/gemini-1.5-flash-latest",
+    });
 
     const result = await model.generateContent(
       `Generate ${count} ${skill} level MCQ questions on ${topic}.
