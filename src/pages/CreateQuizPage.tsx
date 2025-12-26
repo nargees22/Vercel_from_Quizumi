@@ -724,13 +724,26 @@ setIsCustomQuestionValid(false);
   }
 
   setIsCreating(true);
+  // ✅ 1️⃣ Get logged-in user
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
 
+  if (userError || !user) {
+    alert('User not logged in');
+    setIsCreating(false);
+    return;
+  }
+
+   const hostId = user.id; 
   const quizId = Math.random().toString(36).substring(2, 8).toUpperCase();
 
   const quizPayload = {
     quiz_id: quizId,
     title: finalTitle,
     organizer_name: organizerName!,
+      host_id: hostId, 
     game_state: GameState.LOBBY,
     //game_state: GameState.QUESTION_ACTIVE,
   current_question_index: 0,
