@@ -26,7 +26,7 @@ const EMPTY_CUSTOM_QUESTION = {
   type: QuestionType.MCQ,
 };
 
-import { generateQuestions } from '../gemini.ts';
+import { generateQuestions } from '../../gemini.ts';
 
 import type { Quiz, Player, Question, PlayerAnswer, QuizConfig, MatchPair } from '../../types';
 import { GameState, QuestionType, Clan } from '../../types';
