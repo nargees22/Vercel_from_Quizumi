@@ -98,6 +98,9 @@
 //     }
 // }
 
+
+console.log("ENV CHECK:", import.meta.env.VITE_SUPABASE_FUNCTION_URL);
+
 const FUNCTION_URL = import.meta.env.VITE_SUPABASE_FUNCTION_URL;
 
 export async function generateQuestions(
