@@ -105,6 +105,10 @@ export async function generateQuestions(
   skill: string,
   count: number
 ) {
+  if (!FUNCTION_URL) {
+    throw new Error("Missing VITE_SUPABASE_FUNCTION_URL");
+  }
+
   const res = await fetch(`${FUNCTION_URL}/generate-questions`, {
     method: "POST",
     headers: {
@@ -114,7 +118,8 @@ export async function generateQuestions(
   });
 
   if (!res.ok) {
-    throw new Error("Failed to generate questions");
+    const text = await res.text();
+    throw new Error(text);
   }
 
   return res.json();

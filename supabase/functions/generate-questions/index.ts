@@ -2,10 +2,9 @@ import { GoogleGenerativeAI } from "npm:@google/generative-ai";
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") {
-    return new Response(
-      JSON.stringify({ error: "Only POST allowed" }),
-      { status: 405 }
-    );
+    return new Response(JSON.stringify({ error: "Only POST allowed" }), {
+      status: 405,
+    });
   }
 
   try {
@@ -20,10 +19,7 @@ Deno.serve(async (req) => {
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-
-    const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-pro",
-    });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
 
     const result = await model.generateContent(
       `Generate ${count} ${skill} level MCQ questions on ${topic}.
@@ -36,10 +32,8 @@ Deno.serve(async (req) => {
       { headers: { "Content-Type": "application/json" } }
     );
   } catch (err) {
-    console.error(err);
-    return new Response(
-      JSON.stringify({ error: "Gemini failed" }),
-      { status: 500 }
-    );
+    return new Response(JSON.stringify({ error: "Gemini failed" }), {
+      status: 500,
+    });
   }
 });
