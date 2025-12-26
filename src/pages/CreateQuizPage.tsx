@@ -724,19 +724,7 @@ setIsCustomQuestionValid(false);
   }
 
   setIsCreating(true);
-  // ✅ 1️⃣ Get logged-in user
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
-  if (userError || !user) {
-    alert('User not logged in');
-    setIsCreating(false);
-    return;
-  }
-
-   const hostId = user.id; 
+ const hostId = crypto.randomUUID(); 
   const quizId = Math.random().toString(36).substring(2, 8).toUpperCase();
 
   const quizPayload = {
