@@ -12,27 +12,35 @@ export default async function handler(
   try {
     const { topic, skill, count } = req.body;
 
+    if (!topic || !skill || !count) {
+      return res.status(400).json({ error: "Missing parameters" });
+    }
+
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      return res.status(500).json({ error: "Missing GEMINI_API_KEY" });
+      throw new Error("GEMINI_API_KEY missing");
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
+
+    // ✅ CORRECT MODEL
     const model = genAI.getGenerativeModel({
-      model: "models/gemini-1.5-flash",
+      model: "gemini-1.5-flash",
     });
 
     const result = await model.generateContent(
       `Generate ${count} ${skill} level MCQ questions on ${topic}.
-       Each question must have exactly 4 options and one correct answer.
-       Return JSON only.`
+Each question must have exactly 4 options and one correct answer.
+Return JSON only.`
     );
 
-    res.status(200).json({
+    return res.status(200).json({
       result: result.response.text(),
     });
   } catch (err: any) {
-    console.error(err);
-    res.status(500).json({ error: err.message });
+    console.error("API ERROR:", err);
+    return res.status(500).json({
+      error: err.message || "Function crashed",
+    });
   }
 }
